@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build & Output
+.next/
+dist/
+build/
+*.egg-info/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Environment & Secrets
+.env
+.env.local
+*.pem
+*.key
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

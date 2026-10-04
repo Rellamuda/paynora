@@ -1,0 +1,50 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PayNora Global Financial Core API",
+    "version": "1.0.0",
+    "description": "Authoritative financial API contract for PayNora Web, iOS, Android, and Admin platforms."
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Platform Health check",
+        "responses": {
+          "200": {
+            "description": "System operational status"
+          }
+        }
+      }
+    },
+    "/api/v1/countries/active": {
+      "get": {
+        "summary": "Retrieve 11 initial active operating countries",
+        "responses": {
+          "200": {
+            "description": "List of active country profiles"
+          }
+        }
+      }
+    },
+    "/api/v1/transfers": {
+      "post": {
+        "summary": "Create idempotent transfer intent",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Transfer intent created"
+          }
+        }
+      }
+    }
+  }
+}
