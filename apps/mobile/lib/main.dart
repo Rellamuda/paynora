@@ -16,20 +16,18 @@ class PayNoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PayNora',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Inter',
-        primaryColor: PayNoraColors.primary,
-        scaffoldBackgroundColor: PayNoraColors.surface,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: PayNoraColors.primary,
-          primary: PayNoraColors.primary,
-          secondary: PayNoraColors.secondary,
-        ),
-      ),
-      home: const MainNavigationShell(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeNotifier.instance,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'PayNora',
+          debugShowCheckedModeBanner: false,
+          theme: PayNoraThemes.lightTheme,
+          darkTheme: PayNoraThemes.darkTheme,
+          themeMode: themeMode,
+          home: const MainNavigationShell(),
+        );
+      },
     );
   }
 }
@@ -44,32 +42,44 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    SendScreen(),
-    WalletsScreen(),
-    AIScreen(),
-    SettingsScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(onNavigateTab: (idx) => setState(() => _currentIndex = idx)),
+      const SendScreen(),
+      const WalletsScreen(),
+      const AIScreen(),
+      const SettingsScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeNotifier.instance.isDarkMode;
+
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: PayNoraColors.primary,
-        unselectedItemColor: Colors.black45,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
+        backgroundColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+        selectedItemColor: PayNoraColors.brandSecondary,
+        unselectedItemColor: isDark ? PayNoraColors.darkTextSecondary : Colors.black45,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+        unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.send_rounded), label: 'Send'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallets'),
-          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'AI'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallets'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Nora AI'),
+          BottomNavigationBarItem(icon: Icon(Icons.tune_rounded), label: 'Vault'),
         ],
       ),
     );

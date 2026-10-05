@@ -64,6 +64,18 @@ class ApiService {
     return res.data;
   }
 
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final headers = await _authHeaders();
+    final res = await _dio.get('/users/me', options: Options(headers: headers));
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getKYCStatus() async {
+    final headers = await _authHeaders();
+    final res = await _dio.get('/kyc/status', options: Options(headers: headers));
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> verifyKYC(String docType, String docNumber) async {
     final headers = await _authHeaders();
     final res = await _dio.post('/kyc/verify',
@@ -98,7 +110,26 @@ class ApiService {
     return res.data;
   }
 
-  // FX & Transfers
+  Future<Map<String, dynamic>> convertWallet(
+    String fromCurrency,
+    String toCurrency,
+    String fromAmount,
+    String toAmount,
+  ) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post('/wallets/convert',
+      data: {
+        'from_currency': fromCurrency,
+        'to_currency': toCurrency,
+        'from_amount': fromAmount,
+        'to_amount': toAmount,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  // FX & Quotes
   Future<Map<String, dynamic>> getFXQuote(String from, String to, String amount) async {
     final res = await _dio.get('/fx/quote', queryParameters: {
       'source_currency': from,
@@ -108,6 +139,7 @@ class ApiService {
     return res.data;
   }
 
+  // Transfers
   Future<Map<String, dynamic>> createTransfer(Map<String, dynamic> payload, String idempotencyKey) async {
     final headers = await _authHeaders();
     headers['Idempotency-Key'] = idempotencyKey;
@@ -123,6 +155,33 @@ class ApiService {
     return res.data['transfers'] ?? [];
   }
 
+  // Beneficiaries
+  Future<List<dynamic>> getBeneficiaries() async {
+    final headers = await _authHeaders();
+    final res = await _dio.get('/beneficiaries', options: Options(headers: headers));
+    return res.data['beneficiaries'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createBeneficiary(
+    String name,
+    String countryIso,
+    String currency,
+    Map<String, dynamic> accountDetails,
+  ) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post('/beneficiaries',
+      data: {
+        'name': name,
+        'country_iso': countryIso,
+        'currency': currency,
+        'account_details': accountDetails,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  // AI Assistant
   Future<Map<String, dynamic>> chatAI(String prompt) async {
     final headers = await _authHeaders();
     final res = await _dio.post('/ai/chat',
