@@ -86,6 +86,48 @@ export async function activateWallet(currency: string, token: string) {
   return res.json();
 }
 
+export async function fundWallet(currency: string, amount: string, token: string) {
+  const url = `${getApiBaseUrl()}/wallets/fund`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ currency, amount })
+  });
+  if (!res.ok) throw new Error('Failed to deposit funds');
+  return res.json();
+}
+
+export async function convertWallet(
+  fromCurrency: string,
+  toCurrency: string,
+  fromAmount: string,
+  toAmount: string,
+  token: string
+) {
+  const url = `${getApiBaseUrl()}/wallets/convert`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      from_currency: fromCurrency,
+      to_currency: toCurrency,
+      from_amount: fromAmount,
+      to_amount: toAmount
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Currency conversion failed' }));
+    throw new Error(err.detail || 'Currency conversion failed');
+  }
+  return res.json();
+}
+
 export async function fetchFXQuote(sourceCurrency: string, destCurrency: string, amount: string) {
   const url = `${getApiBaseUrl()}/fx/quote?source_currency=${encodeURIComponent(sourceCurrency)}&destination_currency=${encodeURIComponent(destCurrency)}&source_amount=${encodeURIComponent(amount)}`;
   const res = await fetch(url);
@@ -116,6 +158,13 @@ export async function createBeneficiary(payload: any, token: string) {
   return res.json();
 }
 
+export async function fetchTransfers() {
+  const url = `${getApiBaseUrl()}/transfers`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch transfers');
+  return res.json();
+}
+
 export async function createTransfer(payload: any, idempotencyKey: string, token: string) {
   const url = `${getApiBaseUrl()}/transfers`;
   const res = await fetch(url, {
@@ -131,6 +180,13 @@ export async function createTransfer(payload: any, idempotencyKey: string, token
     const err = await res.json().catch(() => ({ detail: 'Transfer failed' }));
     throw new Error(err.detail || 'Transfer failed');
   }
+  return res.json();
+}
+
+export async function confirmTransfer(transferId: string) {
+  const url = `${getApiBaseUrl()}/transfers/${transferId}/confirm`;
+  const res = await fetch(url, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to confirm transfer');
   return res.json();
 }
 

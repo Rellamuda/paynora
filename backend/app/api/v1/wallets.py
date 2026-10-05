@@ -9,6 +9,16 @@ router = APIRouter(prefix="/wallets", tags=["Multi-Currency Wallets"])
 class ActivateWalletPayload(BaseModel):
     currency: str
 
+class FundWalletPayload(BaseModel):
+    currency: str
+    amount: str
+
+class ConvertWalletPayload(BaseModel):
+    from_currency: str
+    to_currency: str
+    from_amount: str
+    to_amount: str
+
 @router.get("")
 def list_wallets(current_user: dict = Depends(get_current_user)):
     """Retrieve all multi-currency digital wallets for authenticated customer."""
@@ -29,3 +39,35 @@ def activate_wallet(
     user_id = current_user["user_id"]
     wallet = WalletEngine.activate_currency_wallet(user_id, payload.currency)
     return wallet
+
+@router.post("/fund")
+def fund_wallet(
+    payload: FundWalletPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """Deposit / Fund wallet with simulated local or international rail."""
+    user_id = current_user["user_id"]
+    try:
+        wallet = WalletEngine.fund_wallet(user_id, payload.currency, payload.amount)
+        return {"status": "SUCCESS", "wallet": wallet}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/convert")
+def convert_wallet_currency(
+    payload: ConvertWalletPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """Instant multi-currency exchange between user wallets."""
+    user_id = current_user["user_id"]
+    try:
+        result = WalletEngine.convert_wallet_currency(
+            user_id,
+            payload.from_currency,
+            payload.to_currency,
+            payload.from_amount,
+            payload.to_amount
+        )
+        return {"status": "CONVERTED", **result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
