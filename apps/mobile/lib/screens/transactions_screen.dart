@@ -363,7 +363,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black84),
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),

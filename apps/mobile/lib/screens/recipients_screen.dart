@@ -334,7 +334,7 @@ class _RecipientsScreenState extends State<RecipientsScreen> {
                           const SizedBox(height: 3),
                           Text('$institution • $acc', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                           const SizedBox(height: 2),
-                          Text('Receives in $curr', style: TextStyle(color: isDark ? Colors.white70 : Colors.black84, fontSize: 11, fontWeight: FontWeight.w600)),
+                          Text('Receives in $curr', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 11, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -376,7 +376,7 @@ class _RecipientsScreenState extends State<RecipientsScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black84),
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
