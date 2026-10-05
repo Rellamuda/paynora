@@ -87,21 +87,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeNotifier.instance,
-      builder: (context, themeMode, _) {
-        final isDark = themeMode == ThemeMode.dark;
-        final theme = Theme.of(context);
+    final theme = Theme.of(context);
+    final isDark = ThemeNotifier.instance.isDarkMode;
 
-        return Scaffold(
-          backgroundColor: isDark ? PayNoraColors.darkBackground : PayNoraColors.lightBackground,
-          appBar: AppBar(
-            title: const Text('Account, Theme & Compliance', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
-            backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
-            elevation: 0,
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(18),
+    return Scaffold(
+      backgroundColor: isDark ? PayNoraColors.darkBackground : PayNoraColors.lightBackground,
+      appBar: AppBar(
+        title: const Text('Account, Theme & Compliance', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
+        backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(18),
         children: [
           // Profile Card
           Container(
@@ -324,8 +321,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
         ],
       ),
-    );
-      },
     );
   }
 }
