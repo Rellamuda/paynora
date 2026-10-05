@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { fetchActiveCountries, checkHealth } from '../lib/api-client';
+import { useTheme } from '../lib/theme-context';
 
 const FALLBACK_COUNTRIES = [
   { iso_code: 'NG', name: 'Nigeria', flag: '🇳🇬', primary_currency: 'NGN' },
@@ -18,6 +19,7 @@ const FALLBACK_COUNTRIES = [
 ];
 
 export default function LandingPage() {
+  const { isDark, toggleTheme } = useTheme();
   const [activeCountries, setActiveCountries] = useState<any[]>(FALLBACK_COUNTRIES);
   const [apiHealth, setApiHealth] = useState<any>(null);
 
@@ -42,56 +44,77 @@ export default function LandingPage() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/logo.png" alt="PayNora" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
-          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main, #0F172A)', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main, #FFFFFF)', letterSpacing: '-0.5px' }}>
             PayNora <span style={{ fontSize: '12px', color: '#00A3FF', background: 'rgba(0,163,255,0.12)', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>GLOBAL FINTECH</span>
           </div>
         </div>
-        <nav style={{ display: 'flex', gap: '16px' }}>
+        <nav style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              padding: '10px 16px',
+              background: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Toggle Dark / Light Theme"
+          >
+            <span>{isDark ? '🌙 Pure Dark' : '☀️ Light Mode'}</span>
+          </button>
+
           <a href="/onboarding" style={{ padding: '12px 24px', background: '#00A3FF', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,163,255,0.3)' }}>
             Get Started →
           </a>
-          <a href="/dashboard" style={{ padding: '12px 24px', background: '#0A0A0A', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid #262626' }}>
+          <a href="/dashboard" style={{ padding: '12px 24px', background: isDark ? '#141414' : '#0F172A', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
             Open Dashboard
           </a>
         </nav>
       </header>
 
       <main style={{ textAlign: 'center', margin: '40px 0' }}>
-        <h1 style={{ fontSize: '52px', fontWeight: '800', color: '#0D253F', marginBottom: '20px', letterSpacing: '-1.5px', lineHeight: 1.15 }}>
+        <h1 style={{ fontSize: '52px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '20px', letterSpacing: '-1.5px', lineHeight: 1.15 }}>
           Global Money Movement Engine & Multi-Currency Platform
         </h1>
-        <p style={{ fontSize: '20px', color: '#475569', maxWidth: '820px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '20px', color: 'var(--text-muted)', maxWidth: '820px', margin: '0 auto 40px', lineHeight: 1.6 }}>
           Instant, deterministic cross-border transfers and multi-currency wallets backed by double-entry accounting, real-time FX rate locking, and conversational AI financial intelligence.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '60px' }}>
-          <a href="/onboarding" style={{ padding: '16px 36px', background: '#00C853', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none' }}>
+          <a href="/onboarding" style={{ padding: '16px 36px', background: '#00A3FF', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 16px rgba(0,163,255,0.3)' }}>
             Create Account & Verify ID →
           </a>
-          <a href="/dashboard" style={{ padding: '16px 32px', background: '#F1F5F9', color: '#0D253F', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', border: '1px solid #CBD5E1' }}>
+          <a href="/dashboard" style={{ padding: '16px 32px', background: isDark ? '#141414' : '#F1F5F9', color: 'var(--text-main)', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
             Launch Dashboard
           </a>
         </div>
 
         {/* 11 Active Countries Grid */}
-        <div style={{ background: '#FFF', padding: '36px', borderRadius: '20px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', border: '1px solid #E2E8F0', textAlign: 'left', maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ background: 'var(--bg-card)', padding: '36px', borderRadius: '20px', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', textAlign: 'left', maxWidth: '1000px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0D253F' }}>Initial 11 Active Operating Corridors</h3>
-              <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '14px' }}>Fully activated for cross-border sending, receiving, holding, and exchange.</p>
+              <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: 'var(--text-main)' }}>Initial 11 Active Operating Corridors</h3>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '14px' }}>Fully activated for cross-border sending, receiving, holding, and exchange.</p>
             </div>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#00C853', background: '#E8F5E9', padding: '6px 12px', borderRadius: '20px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#00A3FF', background: 'rgba(0,163,255,0.12)', padding: '6px 12px', borderRadius: '20px' }}>
               ● 11 ACTIVE CORRIDORS
             </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             {activeCountries.map((country) => (
-              <div key={country.iso_code} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <div key={country.iso_code} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: 'var(--bg-card-subtle)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <span style={{ fontSize: '28px' }}>{country.flag}</span>
                 <div>
-                  <div style={{ fontWeight: '700', fontSize: '15px', color: '#0F172A' }}>{country.name}</div>
-                  <div style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Currency: <strong>{country.primary_currency}</strong></div>
+                  <div style={{ fontWeight: '700', fontSize: '15px', color: 'var(--text-main)' }}>{country.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>Currency: <strong>{country.primary_currency}</strong></div>
                 </div>
               </div>
             ))}

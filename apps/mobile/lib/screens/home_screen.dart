@@ -167,14 +167,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = ThemeNotifier.instance.isDarkMode;
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeNotifier.instance,
+      builder: (context, themeMode, _) {
+        final isDark = themeMode == ThemeMode.dark;
+        final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
-        elevation: 0,
+        return Scaffold(
+          backgroundColor: isDark ? PayNoraColors.darkBackground : PayNoraColors.lightBackground,
+          appBar: AppBar(
+            backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
+            elevation: 0,
         title: Row(
           children: [
             ClipRRect(
@@ -580,6 +583,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
