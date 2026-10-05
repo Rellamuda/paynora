@@ -182,6 +182,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             <a
+              href="http://13.48.25.254/PayNora.apk"
+              download="PayNora.apk"
+              style={{ padding: '8px 12px', background: 'rgba(0,163,255,0.12)', color: '#00A3FF', border: '1px solid rgba(0,163,255,0.3)', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title="Download PayNora APK (Android)"
+            >
+              📲 Get App
+            </a>
+
+            <a
               href="/dashboard/send"
               style={{ padding: '9px 16px', background: '#00C853', color: '#FFF', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
             >
