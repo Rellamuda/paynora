@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = ThemeNotifier.instance.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark ? PayNoraColors.darkBackground : PayNoraColors.lightBackground,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
         elevation: 0,
@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/logo.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandPrimary)),
+              child: Image.asset('assets/logo.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -190,12 +190,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: PayNoraColors.brandPrimary.withOpacity(0.2),
+                color: PayNoraColors.brandSecondary.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Text(
                 'GLOBAL',
-                style: TextStyle(color: PayNoraColors.brandPrimary, fontSize: 9, fontWeight: FontWeight.w800),
+                style: TextStyle(color: PayNoraColors.brandSecondary, fontSize: 9, fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -230,8 +230,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isDark
-                            ? [const Color(0xFF161616), const Color(0xFF0A0A0A)]
-                            : [PayNoraColors.brandDeepBlue, PayNoraColors.brandPrimary],
+                            ? [const Color(0xFF131E3A), const Color(0xFF0F172A)]
+                            : [PayNoraColors.brandPrimary, const Color(0xFF1E3A5F)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),

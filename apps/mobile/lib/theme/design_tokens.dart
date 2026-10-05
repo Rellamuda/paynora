@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 class PayNoraColors {
-  // Brand Core Colors - Aesthetic Electric Blue & Pure Dark
-  static const Color brandPrimary = Color(0xFF00A3FF); // Aesthetic Electric Blue
-  static const Color brandSecondary = Color(0xFF00B0FF); // Vibrant Cyan
-  static const Color brandDeepBlue = Color(0xFF0277BD); // Deep Electric Accent
+  // Brand Core Colors
+  static const Color brandPrimary = Color(0xFF0D253F); // Deep Navy
+  static const Color brandSecondary = Color(0xFF00C853); // Emerald Green
   static const Color accentPurple = Color(0xFF6C5CE7);
 
   // Light Mode Tokens
@@ -16,14 +15,14 @@ class PayNoraColors {
   static const Color lightTextSecondary = Color(0xFF64748B);
   static const Color lightBorder = Color(0xFFE2E8F0);
 
-  // Pure Dark (OLED Black) Tokens - Perfectly matches the new PayNora Logo
-  static const Color darkBackground = Color(0xFF000000); // Pure OLED Black
-  static const Color darkSurface = Color(0xFF0A0A0A);    // Pitch Dark Surface
-  static const Color darkCard = Color(0xFF121212);       // Charcoal Card
-  static const Color darkCardSubtle = Color(0xFF1A1A1A); // Dark Neutral
-  static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextSecondary = Color(0xFFA3A3A3);
-  static const Color darkBorder = Color(0xFF262626);
+  // Dark Mode Tokens
+  static const Color darkBackground = Color(0xFF0B132B);
+  static const Color darkSurface = Color(0xFF131E3A);
+  static const Color darkCard = Color(0xFF162244);
+  static const Color darkCardSubtle = Color(0xFF1C2B4E);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkBorder = Color(0xFF223456);
 
   // Status Colors
   static const Color success = Color(0xFF16A34A);
@@ -76,8 +75,8 @@ class PayNoraThemes {
         onBackground: PayNoraColors.lightTextPrimary,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: PayNoraColors.lightTextPrimary,
+        backgroundColor: PayNoraColors.brandPrimary,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),
@@ -102,9 +101,9 @@ class PayNoraThemes {
       brightness: Brightness.dark,
       fontFamily: 'Inter',
       scaffoldBackgroundColor: PayNoraColors.darkBackground,
-      primaryColor: PayNoraColors.brandPrimary,
+      primaryColor: PayNoraColors.brandSecondary,
       colorScheme: const ColorScheme.dark(
-        primary: PayNoraColors.brandPrimary,
+        primary: PayNoraColors.brandSecondary,
         secondary: PayNoraColors.brandSecondary,
         surface: PayNoraColors.darkSurface,
         background: PayNoraColors.darkBackground,
@@ -129,7 +128,7 @@ class PayNoraThemes {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: PayNoraColors.darkSurface,
-        selectedItemColor: PayNoraColors.brandPrimary,
+        selectedItemColor: PayNoraColors.brandSecondary,
         unselectedItemColor: PayNoraColors.darkTextSecondary,
       ),
     );

@@ -45,7 +45,7 @@ export default function LandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/logo.png" alt="PayNora" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
           <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main, #FFFFFF)', letterSpacing: '-0.5px' }}>
-            PayNora <span style={{ fontSize: '12px', color: '#00A3FF', background: 'rgba(0,163,255,0.12)', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>GLOBAL FINTECH</span>
+            PayNora <span style={{ fontSize: '12px', color: '#00C853', background: '#E8F5E9', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>GLOBAL FINTECH</span>
           </div>
         </div>
         <nav style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
@@ -67,13 +67,14 @@ export default function LandingPage() {
             }}
             title="Toggle Dark / Light Theme"
           >
-            <span>{isDark ? '🌙 Pure Dark' : '☀️ Light Mode'}</span>
+            <span>{isDark ? '🌙' : '☀️'}</span>
+            <span>{isDark ? 'Dark Theme' : 'Light Theme'}</span>
           </button>
 
-          <a href="/onboarding" style={{ padding: '12px 24px', background: '#00A3FF', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,163,255,0.3)' }}>
+          <a href="/onboarding" style={{ padding: '12px 24px', background: '#00C853', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Get Started →
           </a>
-          <a href="/dashboard" style={{ padding: '12px 24px', background: isDark ? '#141414' : '#0F172A', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
+          <a href="/dashboard" style={{ padding: '12px 24px', background: isDark ? '#1C2B4E' : '#0D253F', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
             Open Dashboard
           </a>
         </nav>
@@ -88,10 +89,10 @@ export default function LandingPage() {
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '60px' }}>
-          <a href="/onboarding" style={{ padding: '16px 36px', background: '#00A3FF', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 16px rgba(0,163,255,0.3)' }}>
+          <a href="/onboarding" style={{ padding: '16px 36px', background: '#00C853', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Create Account & Verify ID →
           </a>
-          <a href="/dashboard" style={{ padding: '16px 32px', background: isDark ? '#141414' : '#F1F5F9', color: 'var(--text-main)', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+          <a href="/dashboard" style={{ padding: '16px 32px', background: isDark ? '#1C2B4E' : '#F1F5F9', color: 'var(--text-main)', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
             Launch Dashboard
           </a>
         </div>
@@ -103,7 +104,7 @@ export default function LandingPage() {
               <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: 'var(--text-main)' }}>Initial 11 Active Operating Corridors</h3>
               <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '14px' }}>Fully activated for cross-border sending, receiving, holding, and exchange.</p>
             </div>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#00A3FF', background: 'rgba(0,163,255,0.12)', padding: '6px 12px', borderRadius: '20px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#00C853', background: '#E8F5E9', padding: '6px 12px', borderRadius: '20px' }}>
               ● 11 ACTIVE CORRIDORS
             </span>
           </div>

@@ -218,12 +218,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('🌙 Pure Dark (OLED)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const Text('🌙 Dark Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   if (isDark) const Icon(Icons.check_circle, color: PayNoraColors.brandSecondary, size: 16),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              const Text('Pitch black aesthetic', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                              const Text('Midnight navy fintech', style: TextStyle(color: Colors.grey, fontSize: 10)),
                             ],
                           ),
                         ),

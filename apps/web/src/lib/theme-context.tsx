@@ -11,13 +11,13 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
-  isDark: true,
+  isDark: false,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -26,8 +26,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setTheme(saved);
       document.documentElement.setAttribute('data-theme', saved);
     } else {
-      setTheme('dark');
-      document.documentElement.setAttribute('data-theme', 'dark');
+      // Default to dark or light based on system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initial = prefersDark ? 'dark' : 'light';
+      setTheme(initial);
+      document.documentElement.setAttribute('data-theme', initial);
     }
     setMounted(true);
   }, []);
@@ -47,43 +50,39 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           --bg-card: #FFFFFF;
           --bg-card-subtle: #F1F5F9;
           --bg-header: #FFFFFF;
-          --bg-sidebar: #050505;
+          --bg-sidebar: #0D253F;
           --border-color: #E2E8F0;
           --border-subtle: rgba(0, 0, 0, 0.06);
           --text-main: #0F172A;
           --text-muted: #64748B;
-          --accent-blue: #00A3FF;
-          --accent-blue-bg: rgba(0, 163, 255, 0.12);
-          --accent-green: #00A3FF;
-          --accent-green-bg: rgba(0, 163, 255, 0.12);
-          --brand-navy: #00A3FF;
+          --accent-green: #00C853;
+          --accent-green-bg: rgba(0, 200, 83, 0.12);
+          --brand-navy: #0D253F;
           --input-bg: #FFFFFF;
           --input-border: #CBD5E1;
         }
 
         [data-theme='dark'] {
-          --bg-app: #000000;
-          --bg-card: #0A0A0A;
-          --bg-card-subtle: #141414;
-          --bg-header: #050505;
-          --bg-sidebar: #000000;
-          --border-color: #222222;
+          --bg-app: #0B132B;
+          --bg-card: #131E3A;
+          --bg-card-subtle: #1C2B4E;
+          --bg-header: #0F1A36;
+          --bg-sidebar: #070D1C;
+          --border-color: #223456;
           --border-subtle: rgba(255, 255, 255, 0.08);
-          --text-main: #FFFFFF;
-          --text-muted: #A3A3A3;
-          --accent-blue: #00A3FF;
-          --accent-blue-bg: rgba(0, 163, 255, 0.15);
-          --accent-green: #00A3FF;
-          --accent-green-bg: rgba(0, 163, 255, 0.15);
-          --brand-navy: #00A3FF;
-          --input-bg: #0A0A0A;
-          --input-border: #262626;
+          --text-main: #F8FAFC;
+          --text-muted: #94A3B8;
+          --accent-green: #00E676;
+          --accent-green-bg: rgba(0, 230, 118, 0.15);
+          --brand-navy: #1C2B4E;
+          --input-bg: #0F1A36;
+          --input-border: #223456;
         }
 
         body {
           background-color: var(--bg-app);
           color: var(--text-main);
-          transition: background-color 0.2s ease, color 0.2s ease;
+          transition: background-color 0.25s ease, color 0.25s ease;
         }
       `}</style>
       {children}

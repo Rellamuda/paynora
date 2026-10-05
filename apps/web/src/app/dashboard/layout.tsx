@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif' }}>
       {/* Permanent Left Sidebar Navigation */}
-      <aside style={{ width: '260px', background: isDark ? '#000000' : '#0D253F', color: '#FFF', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${isDark ? '#1A1A1A' : '#1E3A5F'}`, flexShrink: 0 }}>
+      <aside style={{ width: '260px', background: isDark ? '#070D1C' : '#0D253F', color: '#FFF', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${isDark ? '#1C2B4E' : '#1E3A5F'}`, flexShrink: 0 }}>
         {/* Brand with New Official Logo */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <a href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '20px', fontWeight: 800, color: '#FFF', letterSpacing: '-0.5px' }}>PayNora</span>
-                <span style={{ fontSize: '10px', fontWeight: 700, color: '#00A3FF', background: 'rgba(0,163,255,0.15)', padding: '2px 6px', borderRadius: '4px' }}>GLOBAL</span>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#00C853', background: 'rgba(0,200,83,0.15)', padding: '2px 6px', borderRadius: '4px' }}>GLOBAL</span>
               </div>
               <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Money Movement Platform</div>
             </div>
@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {profile?.first_name || 'Customer'} {profile?.last_name || ''}
           </div>
           <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>{profile?.email || 'user@paynora.com'}</div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#00A3FF', background: 'rgba(0,163,255,0.15)', padding: '3px 8px', borderRadius: '12px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#00C853', background: 'rgba(0,200,83,0.15)', padding: '3px 8px', borderRadius: '12px' }}>
             ● KYC {kycStatus?.kyc_status || 'APPROVED'}
           </div>
         </div>
@@ -105,7 +105,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   fontSize: '14px',
                   fontWeight: isActive ? 700 : 500,
                   color: isActive ? '#FFF' : '#888',
-                  background: isActive ? '#00A3FF' : 'transparent',
+                  background: isActive ? '#00C853' : 'transparent',
                   textDecoration: 'none',
                   transition: 'background 0.2s ease, color 0.2s ease'
                 }}
@@ -119,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Bottom Actions */}
         <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {/* Theme toggle in sidebar */}
+          {/* Quick theme toggle in sidebar */}
           <button
             onClick={toggleTheme}
             style={{
@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               gap: '6px'
             }}
           >
-            {isDark ? '☀️ Switch to Light' : '🌙 Pure Dark Mode'}
+            {isDark ? '☀️ Switch to Light' : '🌙 Switch to Dark'}
           </button>
           <button
             onClick={handleLogout}
@@ -154,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Top Header Bar */}
         <header style={{ background: 'var(--bg-header)', borderBottom: '1px solid var(--border-color)', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background 0.2s' }}>
           <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Authoritative Financial Core: <span style={{ color: '#00A3FF', fontWeight: 700 }}>Online & Synchronized</span>
+            Authoritative Financial Core: <span style={{ color: '#00C853', fontWeight: 700 }}>Online & Synchronized</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -178,24 +178,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               title="Toggle Theme"
             >
               <span>{isDark ? '🌙' : '☀️'}</span>
-              <span>{isDark ? 'Pure Dark' : 'Light Mode'}</span>
+              <span>{isDark ? 'Dark Theme' : 'Light Theme'}</span>
             </button>
 
             <a
               href="/dashboard/send"
-              style={{ padding: '9px 16px', background: '#00A3FF', color: '#FFF', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
+              style={{ padding: '9px 16px', background: '#00C853', color: '#FFF', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
             >
               💸 Send Money
             </a>
             <a
               href="/dashboard/wallets"
-              style={{ padding: '9px 16px', background: isDark ? '#141414' : '#0D253F', border: `1px solid ${isDark ? '#262626' : 'transparent'}`, color: '#FFF', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
+              style={{ padding: '9px 16px', background: isDark ? '#1C2B4E' : '#0D253F', color: '#FFF', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
             >
               + Deposit
             </a>
             <a
               href="/dashboard/ai"
-              style={{ padding: '9px 16px', background: isDark ? 'rgba(0,163,255,0.12)' : '#EDE9FE', color: '#00A3FF', border: isDark ? '1px solid rgba(0,163,255,0.3)' : 'none', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
+              style={{ padding: '9px 16px', background: isDark ? '#2E1065' : '#EDE9FE', color: isDark ? '#C084FC' : '#6C5CE7', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}
             >
               ✨ Nora AI
             </a>

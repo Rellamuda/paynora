@@ -58,35 +58,30 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeNotifier.instance,
-      builder: (context, themeMode, _) {
-        final isDark = themeMode == ThemeMode.dark;
+    final isDark = ThemeNotifier.instance.isDarkMode;
 
-        return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _screens,
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: isDark ? PayNoraColors.darkSurface : Colors.white,
-            selectedItemColor: PayNoraColors.brandPrimary,
-            unselectedItemColor: isDark ? PayNoraColors.darkTextSecondary : Colors.black45,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-            unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.send_rounded), label: 'Send'),
-              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallets'),
-              BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Nora AI'),
-              BottomNavigationBarItem(icon: Icon(Icons.tune_rounded), label: 'Settings'),
-            ],
-          ),
-        );
-      },
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+        selectedItemColor: PayNoraColors.brandSecondary,
+        unselectedItemColor: isDark ? PayNoraColors.darkTextSecondary : Colors.black45,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+        unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.send_rounded), label: 'Send'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallets'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Nora AI'),
+          BottomNavigationBarItem(icon: Icon(Icons.tune_rounded), label: 'Vault'),
+        ],
+      ),
     );
   }
 }
