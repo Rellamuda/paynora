@@ -35,7 +35,7 @@ export default function SettingsPage() {
         {/* Appearance & Theme Selector */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>Interface Theme & Appearance</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Choose between PayNora Midnight Dark theme or Clean Slate Light theme.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Choose between PayNora Pure Dark (OLED Black) or Clean Slate Light theme.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div
@@ -44,16 +44,16 @@ export default function SettingsPage() {
                 cursor: 'pointer',
                 padding: '20px',
                 borderRadius: '14px',
-                border: `2px solid ${!isDark ? '#00C853' : 'var(--border-color)'}`,
-                background: !isDark ? 'rgba(0,200,83,0.05)' : 'var(--bg-card-subtle)',
+                border: `2px solid ${!isDark ? '#00A3FF' : 'var(--border-color)'}`,
+                background: !isDark ? 'rgba(0,163,255,0.05)' : 'var(--bg-card-subtle)',
                 transition: 'all 0.2s ease'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>☀️ Clean Slate Light</span>
-                {!isDark && <span style={{ color: '#00C853', fontWeight: 800 }}>✓ Active</span>}
+                {!isDark && <span style={{ color: '#00A3FF', fontWeight: 800 }}>✓ Active</span>}
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>High-contrast daytime fintech theme with crisp white surfaces and emerald accents.</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>High-contrast daytime fintech theme with crisp white surfaces and electric blue accents.</p>
             </div>
 
             <div
@@ -62,16 +62,16 @@ export default function SettingsPage() {
                 cursor: 'pointer',
                 padding: '20px',
                 borderRadius: '14px',
-                border: `2px solid ${isDark ? '#00C853' : 'var(--border-color)'}`,
-                background: isDark ? 'rgba(0,200,83,0.08)' : 'var(--bg-card-subtle)',
+                border: `2px solid ${isDark ? '#00A3FF' : 'var(--border-color)'}`,
+                background: isDark ? 'rgba(0,163,255,0.1)' : 'var(--bg-card-subtle)',
                 transition: 'all 0.2s ease'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>🌙 Midnight Dark</span>
-                {isDark && <span style={{ color: '#00C853', fontWeight: 800 }}>✓ Active</span>}
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>🌙 Pure Dark (OLED Black)</span>
+                {isDark && <span style={{ color: '#00A3FF', fontWeight: 800 }}>✓ Active</span>}
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Low-light deep navy command theme designed for focused multi-currency operations.</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Deep pitch-black aesthetic theme matching the official PayNora dark logo.</p>
             </div>
           </div>
         </div>

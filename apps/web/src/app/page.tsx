@@ -40,14 +40,17 @@ export default function LandingPage() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', fontFamily: 'Inter, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' }}>
-        <div style={{ fontSize: '28px', fontWeight: '800', color: '#0D253F', letterSpacing: '-0.5px' }}>
-          PayNora <span style={{ fontSize: '12px', color: '#00C853', background: '#E8F5E9', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>GLOBAL FINTECH</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/logo.png" alt="PayNora" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
+          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main, #0F172A)', letterSpacing: '-0.5px' }}>
+            PayNora <span style={{ fontSize: '12px', color: '#00A3FF', background: 'rgba(0,163,255,0.12)', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>GLOBAL FINTECH</span>
+          </div>
         </div>
         <nav style={{ display: 'flex', gap: '16px' }}>
-          <a href="/onboarding" style={{ padding: '12px 24px', background: '#00C853', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
+          <a href="/onboarding" style={{ padding: '12px 24px', background: '#00A3FF', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,163,255,0.3)' }}>
             Get Started →
           </a>
-          <a href="/dashboard" style={{ padding: '12px 24px', background: '#0D253F', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>
+          <a href="/dashboard" style={{ padding: '12px 24px', background: '#0A0A0A', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid #262626' }}>
             Open Dashboard
           </a>
         </nav>
