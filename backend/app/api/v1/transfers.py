@@ -16,6 +16,10 @@ class CreateTransferRequest(BaseModel):
     destination_country: str = "GB"
     recipient_currency_mode: str = "CHOICE"
 
+class SelectRecipientCurrencyRequest(BaseModel):
+    selected_currency: str
+    payout_method: str = "LOCAL_BANK"
+
 # In-memory transfer store for local development
 TRANSFERS_LIST = [
     {
@@ -55,6 +59,14 @@ def list_transfers():
         "transfers": TRANSFERS_LIST,
         "count": len(TRANSFERS_LIST)
     }
+
+@router.get("/{transfer_id}")
+def get_transfer(transfer_id: str):
+    """Retrieve details and status for a specific transfer by ID."""
+    for tx in TRANSFERS_LIST:
+        if tx["transfer_id"] == transfer_id:
+            return tx
+    raise HTTPException(status_code=404, detail="Transfer not found")
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_transfer(
@@ -101,5 +113,26 @@ def confirm_transfer(transfer_id: str):
     for tx in TRANSFERS_LIST:
         if tx["transfer_id"] == transfer_id:
             tx["state"] = TransferState.COMPLETED
+            event_publisher.publish_event("TransferConfirmed", {"transfer_id": transfer_id, "state": "COMPLETED"})
             return {"status": "SUCCESS", "transfer": tx}
+    raise HTTPException(status_code=404, detail="Transfer not found")
+
+@router.post("/{transfer_id}/recipient-currency")
+def select_recipient_currency(transfer_id: str, payload: SelectRecipientCurrencyRequest):
+    """Allow recipient to choose their preferred payout currency (local vs original sender currency)."""
+    for tx in TRANSFERS_LIST:
+        if tx["transfer_id"] == transfer_id:
+            tx["selected_recipient_currency"] = payload.selected_currency.upper()
+            tx["payout_method"] = payload.payout_method
+            tx["state"] = TransferState.RECIPIENT_CURRENCY_SELECTED
+            event_publisher.publish_event("RecipientCurrencySelected", {
+                "transfer_id": transfer_id,
+                "currency": payload.selected_currency
+            })
+            return {
+                "status": "SUCCESS",
+                "transfer_id": transfer_id,
+                "selected_currency": payload.selected_currency.upper(),
+                "state": TransferState.RECIPIENT_CURRENCY_SELECTED
+            }
     raise HTTPException(status_code=404, detail="Transfer not found")

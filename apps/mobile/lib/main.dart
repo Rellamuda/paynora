@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/home_screen.dart';
+import 'screens/send_screen.dart';
+import 'screens/wallets_screen.dart';
+import 'screens/ai_screen.dart';
+import 'screens/settings_screen.dart';
 import 'theme/design_tokens.dart';
 
 void main() {
-  runApp(const PayNoraApp());
+  runApp(const ProviderScope(child: PayNoraApp()));
 }
 
 class PayNoraApp extends StatelessWidget {
@@ -11,100 +17,60 @@ class PayNoraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PayNora Mobile',
+      title: 'PayNora',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: PayNoraColors.backgroundDefault,
+        fontFamily: 'Inter',
+        primaryColor: PayNoraColors.primary,
+        scaffoldBackgroundColor: PayNoraColors.surface,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: PayNoraColors.brandPrimary,
-          primary: PayNoraColors.brandPrimary,
-          secondary: PayNoraColors.brandSecondary,
+          seedColor: PayNoraColors.primary,
+          primary: PayNoraColors.primary,
+          secondary: PayNoraColors.secondary,
         ),
-        useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainNavigationShell(),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class MainNavigationShell extends StatefulWidget {
+  const MainNavigationShell({super.key});
+
+  @override
+  State<MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends State<MainNavigationShell> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    SendScreen(),
+    WalletsScreen(),
+    AIScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: PayNoraColors.brandPrimary,
-        title: const Text(
-          'PayNora Global',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20.0),
-              decoration: BoxDecoration(
-                color: PayNoraColors.surfaceWhite,
-                borderRadius: BorderRadius.circular(16.0),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 10.0)
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Total Multi-Currency Balance',
-                      style: TextStyle(color: PayNoraColors.textSecondary)),
-                  const SizedBox(height: 8),
-                  const Text('₦2,500,000.00',
-                      style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: PayNoraColors.brandPrimary)),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: PayNoraColors.brandPrimary),
-                        child: const Text('Send Money',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                      OutlinedButton(
-                        onPressed: () {},
-                        child: const Text('Exchange'),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            const Text('Initial 11 Active Operating Countries',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: PayNoraColors.brandPrimary)),
-            const SizedBox(height: 12),
-            const ListTile(
-              leading: Text('🇳🇬', style: TextStyle(fontSize: 24)),
-              title: Text('Nigeria (NGN)'),
-              subtitle: Text('Corridor: Active ↔ GB, US, CA'),
-            ),
-            const ListTile(
-              leading: Text('🇬🇧', style: TextStyle(fontSize: 24)),
-              title: Text('United Kingdom (GBP)'),
-              subtitle: Text('Corridor: Active ↔ NG, US, EU'),
-            ),
-          ],
-        ),
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: PayNoraColors.primary,
+        unselectedItemColor: Colors.black45,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+        unselectedLabelStyle: const TextStyle(fontSize: 11),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.send_rounded), label: 'Send'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallets'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'AI'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+        ],
       ),
     );
   }

@@ -1,7 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.v1 import health, countries, transfers, auth, users, onboarding, kyc, wallets, fx, beneficiaries, ai, admin
+from app.api.v1 import (
+    health,
+    countries,
+    corridors,
+    currencies,
+    transfers,
+    auth,
+    users,
+    onboarding,
+    kyc,
+    wallets,
+    fx,
+    beneficiaries,
+    ai,
+    admin,
+    webhooks
+)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -20,6 +36,8 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(countries.router, prefix="/api/v1")
+app.include_router(corridors.router, prefix="/api/v1")
+app.include_router(currencies.router, prefix="/api/v1")
 app.include_router(transfers.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
@@ -30,6 +48,7 @@ app.include_router(fx.router, prefix="/api/v1")
 app.include_router(beneficiaries.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(webhooks.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
