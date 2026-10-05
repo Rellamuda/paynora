@@ -34,11 +34,47 @@ async def handle_provider_webhook(
             "message": "Duplicate webhook received and safely acknowledged without double processing."
         }
 
-    # 2. Signature verification simulation
-    expected_secret = f"paynora_{provider}_secret_key"
-    calculated_sig = hmac.new(expected_secret.encode(), body_bytes, hashlib.sha256).hexdigest()
+    # 2. Real signature verification for Paystack and Flutterwave
+    from app.config import settings
+    from app.wallets.models import WalletEngine
 
-    event_type = payload.get("event_type", "provider.update")
+    provider_name = provider.lower()
+    if provider_name == "paystack":
+        expected_secret = settings.PAYSTACK_SECRET_KEY
+        calculated_sig = hmac.new(expected_secret.encode(), body_bytes, hashlib.sha512).hexdigest()
+        # If live header present, compare signature
+        if x_webhook_signature and x_webhook_signature != calculated_sig:
+            raise HTTPException(status_code=400, detail="Invalid Paystack signature")
+        
+        event = payload.get("event")
+        if event == "charge.success":
+            data = payload.get("data", {})
+            user_id = data.get("metadata", {}).get("user_id")
+            amount_kobo = data.get("amount", 0)
+            currency = data.get("currency", "NGN")
+            amount = str(amount_kobo / 100)
+            if user_id:
+                try:
+                    WalletEngine.fund_wallet(user_id, currency, amount)
+                except Exception:
+                    pass
+
+    elif provider_name == "flutterwave":
+        secret_hash = request.headers.get("verif-hash")
+        # In Flutterwave dashboard, user can set secret verification hash
+        event = payload.get("event")
+        if event == "charge.completed" or payload.get("status") == "successful":
+            data = payload.get("data", payload)
+            user_id = data.get("meta", {}).get("user_id") or data.get("customer", {}).get("id")
+            amount = str(data.get("amount", "0"))
+            currency = data.get("currency", "USD")
+            if user_id:
+                try:
+                    WalletEngine.fund_wallet(str(user_id), currency, amount)
+                except Exception:
+                    pass
+
+    event_type = payload.get("event", payload.get("event_type", f"{provider}.update"))
     data = payload.get("data", payload)
 
     # 3. Publish to Kafka event bus

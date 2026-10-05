@@ -30,4 +30,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Payment Gateways (Smart Dual Engine - Loaded from Environment)
+    PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET_KEY", "")
+    PAYSTACK_PUBLIC_KEY: str = os.getenv("PAYSTACK_PUBLIC_KEY", "")
+    FLW_SECRET_KEY: str = os.getenv("FLW_SECRET_KEY", "")
+    FLW_PUBLIC_KEY: str = os.getenv("FLW_PUBLIC_KEY", "")
+
 settings = Settings()

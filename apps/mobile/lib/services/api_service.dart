@@ -110,6 +110,40 @@ class ApiService {
     return res.data;
   }
 
+  Future<Map<String, dynamic>> initializeDeposit({
+    required String currency,
+    required String amount,
+    String? gateway,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post('/wallets/deposit/initialize',
+      data: {
+        'currency': currency,
+        'amount': amount,
+        if (gateway != null) 'gateway': gateway,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> verifyDeposit({
+    required String reference,
+    required String gateway,
+    required String currency,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post('/wallets/deposit/verify',
+      data: {
+        'reference': reference,
+        'gateway': gateway,
+        'currency': currency,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> convertWallet(
     String fromCurrency,
     String toCurrency,

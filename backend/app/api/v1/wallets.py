@@ -40,6 +40,68 @@ def activate_wallet(
     wallet = WalletEngine.activate_currency_wallet(user_id, payload.currency)
     return wallet
 
+class InitializeDepositPayload(BaseModel):
+    currency: str
+    amount: str
+    gateway: str | None = None
+    callback_url: str | None = None
+
+class VerifyDepositPayload(BaseModel):
+    reference: str
+    gateway: str
+    currency: str
+
+@router.post("/deposit/initialize")
+async def initialize_deposit(
+    payload: InitializeDepositPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Initiates payment session through Smart Dual Gateway Engine (Paystack / Flutterwave).
+    """
+    from app.providers.payment import PaymentGatewayRouter
+    email = current_user.get("email", "customer@paynora.com")
+    user_id = current_user["user_id"]
+    
+    result = await PaymentGatewayRouter.initialize_deposit(
+        email=email,
+        amount=payload.amount,
+        currency=payload.currency,
+        user_id=user_id,
+        gateway=payload.gateway,
+        callback_url=payload.callback_url
+    )
+    return result
+
+@router.post("/deposit/verify")
+async def verify_deposit(
+    payload: VerifyDepositPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Verifies gateway transaction status and credits wallet if successful.
+    """
+    from app.providers.payment import PaymentGatewayRouter
+    user_id = current_user["user_id"]
+    
+    verification = await PaymentGatewayRouter.verify_transaction(
+        reference=payload.reference,
+        gateway=payload.gateway
+    )
+    if verification.get("verified"):
+        wallet = WalletEngine.fund_wallet(user_id, payload.currency, verification.get("amount", "0"))
+        return {
+            "status": "SUCCESS",
+            "message": "Deposit confirmed and credited to wallet",
+            "wallet": wallet,
+            "verification": verification
+        }
+    return {
+        "status": "PENDING_OR_FAILED",
+        "message": "Payment could not be verified as completed",
+        "verification": verification
+    }
+
 @router.post("/fund")
 def fund_wallet(
     payload: FundWalletPayload,
