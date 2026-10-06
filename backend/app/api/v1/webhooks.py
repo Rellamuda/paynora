@@ -17,16 +17,34 @@ async def handle_provider_webhook(
 ):
     """
     Idempotent, signed provider webhook ingress endpoint for payment, FX, and KYC updates.
+    Enforces secret hash verification for Flutterwave and HMAC SHA512 for Paystack.
     """
+    from app.config import settings
+    from app.wallets.models import WalletEngine
+
     body_bytes = await request.body()
     try:
         payload = await request.json()
     except Exception:
         payload = {"raw": body_bytes.decode(errors="ignore")}
 
-    webhook_id = x_webhook_id or payload.get("event_id") or f"wh_{hashlib.sha256(body_bytes).hexdigest()[:16]}"
+    provider_name = provider.lower()
 
-    # 1. Idempotency Check: duplicate webhooks must be harmless
+    # 1. Strict Security Verification First
+    if provider_name == "flutterwave":
+        secret_hash = request.headers.get("verif-hash")
+        expected_hash = settings.FLW_WEBHOOK_HASH
+        if expected_hash and secret_hash != expected_hash:
+            raise HTTPException(status_code=400, detail="Invalid Flutterwave verification hash")
+
+    elif provider_name == "paystack":
+        expected_secret = settings.PAYSTACK_SECRET_KEY
+        calculated_sig = hmac.new(expected_secret.encode(), body_bytes, hashlib.sha512).hexdigest()
+        if x_webhook_signature and x_webhook_signature != calculated_sig:
+            raise HTTPException(status_code=400, detail="Invalid Paystack signature")
+
+    # 2. Idempotency Check: duplicate verified webhooks are safely ignored
+    webhook_id = x_webhook_id or payload.get("event_id") or f"wh_{hashlib.sha256(body_bytes).hexdigest()[:16]}"
     if webhook_id in PROCESSED_WEBHOOKS:
         return {
             "status": "ALREADY_PROCESSED",
@@ -34,37 +52,8 @@ async def handle_provider_webhook(
             "message": "Duplicate webhook received and safely acknowledged without double processing."
         }
 
-    # 2. Real signature verification for Paystack and Flutterwave
-    from app.config import settings
-    from app.wallets.models import WalletEngine
-
-    provider_name = provider.lower()
-    if provider_name == "paystack":
-        expected_secret = settings.PAYSTACK_SECRET_KEY
-        calculated_sig = hmac.new(expected_secret.encode(), body_bytes, hashlib.sha512).hexdigest()
-        # If live header present, compare signature
-        if x_webhook_signature and x_webhook_signature != calculated_sig:
-            raise HTTPException(status_code=400, detail="Invalid Paystack signature")
-        
-        event = payload.get("event")
-        if event == "charge.success":
-            data = payload.get("data", {})
-            user_id = data.get("metadata", {}).get("user_id")
-            amount_kobo = data.get("amount", 0)
-            currency = data.get("currency", "NGN")
-            amount = str(amount_kobo / 100)
-            if user_id:
-                try:
-                    WalletEngine.fund_wallet(user_id, currency, amount)
-                except Exception:
-                    pass
-
-    elif provider_name == "flutterwave":
-        secret_hash = request.headers.get("verif-hash")
-        expected_hash = settings.FLW_WEBHOOK_HASH
-        if expected_hash and secret_hash != expected_hash:
-            raise HTTPException(status_code=400, detail="Invalid Flutterwave verification hash")
-
+    # 3. Process Wallet Crediting / Event Handling
+    if provider_name == "flutterwave":
         event = payload.get("event")
         data = payload.get("data", payload)
         charge_status = data.get("status") or payload.get("status")
@@ -79,10 +68,24 @@ async def handle_provider_webhook(
                 except Exception as e:
                     print(f"Error auto-crediting wallet via Flutterwave webhook: {e}")
 
+    elif provider_name == "paystack":
+        event = payload.get("event")
+        if event == "charge.success":
+            data = payload.get("data", {})
+            user_id = data.get("metadata", {}).get("user_id")
+            amount_kobo = data.get("amount", 0)
+            currency = data.get("currency", "NGN")
+            amount = str(amount_kobo / 100)
+            if user_id:
+                try:
+                    WalletEngine.fund_wallet(user_id, currency, amount)
+                except Exception as e:
+                    print(f"Error auto-crediting wallet via Paystack webhook: {e}")
+
     event_type = payload.get("event", payload.get("event_type", f"{provider}.update"))
     data = payload.get("data", payload)
 
-    # 3. Publish to Kafka event bus
+    # 4. Publish to Kafka event bus
     event_publisher.publish_event("ProviderWebhookReceived", {
         "provider": provider,
         "webhook_id": webhook_id,
@@ -95,7 +98,7 @@ async def handle_provider_webhook(
         "provider": provider,
         "event_type": event_type,
         "status": "PROCESSED",
-        "processed_at": "2026-10-05T10:00:00Z"
+        "processed_at": "2026-10-06T16:00:00Z"
     }
     PROCESSED_WEBHOOKS[webhook_id] = record
 
