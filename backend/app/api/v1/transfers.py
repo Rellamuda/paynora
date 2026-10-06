@@ -25,6 +25,19 @@ class SelectRecipientCurrencyRequest(BaseModel):
     selected_currency: str
     payout_method: str = "LOCAL_BANK"
 
+class ResolveAccountRequest(BaseModel):
+    account_number: str
+    account_bank: str
+    currency: str = "NGN"
+
+class DisbursePayoutRequest(BaseModel):
+    account_bank: str
+    account_number: str
+    amount: str
+    currency: str
+    recipient_name: str
+    narration: str | None = None
+
 # In-memory transfer store for local development
 TRANSFERS_LIST = [
     {
@@ -56,6 +69,30 @@ TRANSFERS_LIST = [
 ]
 
 IDEMPOTENCY_CACHE = {}
+
+@router.get("/banks")
+async def list_supported_banks(country: str = "NG"):
+    """Fetch commercial banks for real-time account routing and resolution."""
+    from app.providers.banking import BankingEngine
+    banks = await BankingEngine.get_banks(country)
+    return {
+        "country": country.upper(),
+        "count": len(banks),
+        "banks": banks
+    }
+
+@router.post("/resolve-account")
+async def resolve_bank_account(payload: ResolveAccountRequest):
+    """Real-time account resolution endpoint verifying beneficiary legal name."""
+    from app.providers.banking import BankingEngine
+    result = await BankingEngine.resolve_account(
+        account_number=payload.account_number,
+        bank_code=payload.account_bank,
+        currency=payload.currency
+    )
+    if result.get("status") == "ERROR":
+        raise HTTPException(status_code=400, detail=result.get("message", "Account verification failed"))
+    return result
 
 @router.get("")
 def list_transfers():
@@ -183,4 +220,35 @@ def select_recipient_currency(transfer_id: str, payload: SelectRecipientCurrency
                 "selected_currency": payload.selected_currency.upper(),
                 "state": TransferState.RECIPIENT_CURRENCY_SELECTED
             }
+    raise HTTPException(status_code=404, detail="Transfer not found")
+
+@router.post("/{transfer_id}/disburse")
+async def disburse_transfer(transfer_id: str, payload: DisbursePayoutRequest):
+    """Trigger automated real-time disbursal/payout via Flutterwave to recipient bank."""
+    from app.providers.banking import BankingEngine
+    for tx in TRANSFERS_LIST:
+        if tx["transfer_id"] == transfer_id:
+            disbursal = await BankingEngine.disburse_payout(
+                transfer_id=transfer_id,
+                account_bank=payload.account_bank,
+                account_number=payload.account_number,
+                amount=payload.amount,
+                currency=payload.currency,
+                recipient_name=payload.recipient_name,
+                narration=payload.narration
+            )
+            tx["disbursal_status"] = disbursal.get("disbursal_status", "PROCESSING")
+            tx["payout_reference"] = disbursal.get("reference")
+            tx["provider_transfer_id"] = disbursal.get("provider_transfer_id")
+            if disbursal.get("status") == "SUCCESS":
+                tx["state"] = TransferState.COMPLETED
+
+            NotificationService.dispatch(
+                user_id="usr_demo",
+                title="Bank Disbursal Initiated",
+                message=f"Disbursal of {payload.currency.upper()} {payload.amount} to {payload.recipient_name} ({payload.account_number}) is underway.",
+                notification_type="TRANSFER_SUCCESS",
+                data={"transfer_id": transfer_id, "reference": disbursal.get("reference")}
+            )
+            return {"status": "SUCCESS", "transfer": tx, "disbursal": disbursal}
     raise HTTPException(status_code=404, detail="Transfer not found")
