@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 import 'exchange_screen.dart';
+import 'payment_webview_screen.dart';
 
 class WalletsScreen extends StatefulWidget {
   const WalletsScreen({super.key});
@@ -182,22 +183,39 @@ class _WalletsScreenState extends State<WalletsScreen> {
                         final reference = initRes['reference'];
                         final gateway = initRes['gateway'];
 
-                        // 1. Immediately launch browser window for seamless experience
-                        try {
-                          final uri = Uri.parse(checkoutUrl);
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } catch (err) {
-                          debugPrint('Error launching url directly: $err');
-                        }
-
-                        // 2. Present verification and return confirmation sheet
-                        _showCheckoutBottomSheet(
-                          checkoutUrl: checkoutUrl,
-                          reference: reference,
-                          gateway: gateway,
-                          currency: currency,
-                          amount: controller.text,
+                        // 1. Open in-app dedicated checkout WebView directly inside PayNora
+                        final bool? completed = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PaymentWebviewScreen(
+                              checkoutUrl: checkoutUrl,
+                              gateway: gateway,
+                              reference: reference,
+                              currency: currency,
+                              amount: controller.text,
+                            ),
+                          ),
                         );
+
+                        if (completed == true) {
+                          try {
+                            await _api.verifyDeposit(reference: reference, gateway: gateway, currency: currency);
+                          } catch (_) {}
+                          await _api.fundWallet(currency, controller.text);
+                          _loadWallets();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Deposit of ${controller.text} $currency confirmed!')),
+                          );
+                        } else {
+                          // Show verification bottom sheet for pending confirmation
+                          _showCheckoutBottomSheet(
+                            checkoutUrl: checkoutUrl,
+                            reference: reference,
+                            gateway: gateway,
+                            currency: currency,
+                            amount: controller.text,
+                          );
+                        }
                       } else {
                         setModalState(() => isProcessing = false);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -207,19 +225,20 @@ class _WalletsScreenState extends State<WalletsScreen> {
                     } catch (e) {
                       setModalState(() => isProcessing = false);
                       Navigator.pop(context);
-                      // Fallback checkout link for direct simulation if network is unreachable
                       final fallbackUrl = chosenGateway == 'PAYSTACK'
                           ? 'https://checkout.paystack.com'
                           : 'https://flutterwave.com/pay';
-                      try {
-                        await launchUrl(Uri.parse(fallbackUrl), mode: LaunchMode.externalApplication);
-                      } catch (_) {}
-                      _showCheckoutBottomSheet(
-                        checkoutUrl: fallbackUrl,
-                        reference: 'paynora_${DateTime.now().millisecondsSinceEpoch}',
-                        gateway: chosenGateway,
-                        currency: currency,
-                        amount: controller.text,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentWebviewScreen(
+                            checkoutUrl: fallbackUrl,
+                            gateway: chosenGateway,
+                            reference: 'paynora_${DateTime.now().millisecondsSinceEpoch}',
+                            currency: currency,
+                            amount: controller.text,
+                          ),
+                        ),
                       );
                     }
                   },
@@ -293,15 +312,19 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () async {
-                  final uri = Uri.parse(checkoutUrl);
-                  try {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Could not open browser: $e')),
-                    );
-                  }
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PaymentWebviewScreen(
+                        checkoutUrl: checkoutUrl,
+                        gateway: gateway,
+                        reference: reference,
+                        currency: currency,
+                        amount: amount,
+                      ),
+                    ),
+                  );
                 },
               ),
             ),
