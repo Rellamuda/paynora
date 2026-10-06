@@ -432,7 +432,7 @@ export default function WalletsPage() {
             )}
           </div>
         </div>
-      )}
+      )()}
 
       {/* CONVERT MODAL */}
       {showConvertModal && (
