@@ -7,7 +7,7 @@ from app.auth.schemas import (
     TokenResponse,
     UserProfileResponse
 )
-from app.auth.store import UserStore
+from app.auth.store import UserStore, USERS_DB
 from app.auth.security import verify_password, create_access_token, decode_access_token
 from app.events.kafka import event_publisher
 
@@ -37,7 +37,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
             "roles": ["CUSTOMER"],
             "account_capabilities": ["VIEW_ACCOUNT", "SEND_MONEY"]
         }
-        UserStore.USERS_DB[user["user_id"]] = user
+        USERS_DB[user["user_id"]] = user
     return user
 
 @router.post("/register", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)

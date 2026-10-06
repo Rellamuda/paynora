@@ -1,7 +1,64 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from decimal import Decimal, InvalidOperation
 import uuid
 import httpx
 from app.config import settings
+
+# ---------------------------------------------------------------------------
+# Smart Gateway Routing Table
+# ---------------------------------------------------------------------------
+# For every currency:
+#   recommended -> gateway with best coverage / success rate / cost for it
+#   supported   -> gateways that can actually process the currency
+#   min / max   -> per-transaction limits (major units). Max values are set
+#                  conservatively below the gateway's account-level single
+#                  charge caps (e.g. Flutterwave rejected GBP > 3,719).
+#   reason      -> short human-readable explanation shown in the UI
+GATEWAY_ROUTING: Dict[str, Dict[str, Any]] = {
+    # --- Paystack home markets (native local rails, highest success rates) ---
+    "NGN": {"recommended": "PAYSTACK", "supported": ["PAYSTACK", "FLUTTERWAVE"], "min": 100, "max": 5_000_000,
+            "reason": "Best Nigerian card, bank transfer & USSD success rates"},
+    "GHS": {"recommended": "PAYSTACK", "supported": ["PAYSTACK", "FLUTTERWAVE"], "min": 1, "max": 50_000,
+            "reason": "Native Ghana card & mobile money rails"},
+    "ZAR": {"recommended": "PAYSTACK", "supported": ["PAYSTACK", "FLUTTERWAVE"], "min": 10, "max": 60_000,
+            "reason": "Native South African card & EFT rails"},
+    "KES": {"recommended": "PAYSTACK", "supported": ["PAYSTACK", "FLUTTERWAVE"], "min": 10, "max": 450_000,
+            "reason": "Native Kenya card & M-Pesa rails"},
+    # --- Global currencies (Flutterwave international card acquiring) ---
+    "USD": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 1, "max": 4_500,
+            "reason": "Global multi-currency card acquiring"},
+    "GBP": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 1, "max": 3_500,
+            "reason": "Global multi-currency card acquiring"},
+    "EUR": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 1, "max": 4_000,
+            "reason": "Global multi-currency card acquiring"},
+    "CAD": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 1, "max": 6_000,
+            "reason": "Global multi-currency card acquiring"},
+    # --- Wider Africa (Flutterwave mobile money coverage) ---
+    "UGX": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 500, "max": 15_000_000,
+            "reason": "Uganda mobile money coverage"},
+    "TZS": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 500, "max": 10_000_000,
+            "reason": "Tanzania mobile money coverage"},
+    "RWF": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 100, "max": 5_000_000,
+            "reason": "Rwanda mobile money coverage"},
+    "XAF": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 100, "max": 2_500_000,
+            "reason": "Francophone Central Africa mobile money"},
+    "XOF": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 100, "max": 2_500_000,
+            "reason": "Francophone West Africa mobile money"},
+    "ZMW": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 5, "max": 100_000,
+            "reason": "Zambia mobile money coverage"},
+    "EGP": {"recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 10, "max": 200_000,
+            "reason": "Egypt card acquiring"},
+}
+
+DEFAULT_ROUTE: Dict[str, Any] = {
+    "recommended": "FLUTTERWAVE", "supported": ["FLUTTERWAVE"], "min": 1, "max": 4_500,
+    "reason": "Global multi-currency coverage",
+}
+
+
+class GatewayRoutingError(ValueError):
+    """Raised when a currency / amount / gateway combination cannot be processed."""
+
 
 class PaymentGatewayRouter:
     """
@@ -14,19 +71,46 @@ class PaymentGatewayRouter:
     FLUTTERWAVE_BASE_URL = "https://api.flutterwave.com/v3"
 
     @classmethod
+    def get_route(cls, currency: str) -> Dict[str, Any]:
+        curr = (currency or "").upper()
+        route = GATEWAY_ROUTING.get(curr, DEFAULT_ROUTE)
+        return {"currency": curr, **route}
+
+    @classmethod
+    def routing_table(cls) -> List[Dict[str, Any]]:
+        return [{"currency": c, **r} for c, r in GATEWAY_ROUTING.items()]
+
+    @classmethod
     def select_gateway(cls, currency: str, requested_gateway: Optional[str] = None) -> str:
         """
         Determines the optimal gateway based on currency and coverage.
+        A requested gateway is honoured only if it supports the currency;
+        otherwise the recommended gateway is used.
         """
-        if requested_gateway and requested_gateway.upper() in ["PAYSTACK", "FLUTTERWAVE"]:
-            return requested_gateway.upper()
+        route = cls.get_route(currency)
+        if requested_gateway:
+            req = requested_gateway.upper()
+            if req in route["supported"]:
+                return req
+        return route["recommended"]
 
-        curr = currency.upper()
-        # NGN local transactions have highest success rates with Paystack
-        if curr == "NGN":
-            return "PAYSTACK"
-        # International currencies (USD, GBP, EUR, CAD) and broad Africa routed to Flutterwave
-        return "FLUTTERWAVE"
+    @classmethod
+    def validate_amount(cls, currency: str, amount: str) -> Decimal:
+        route = cls.get_route(currency)
+        try:
+            value = Decimal(str(amount).replace(",", "").strip())
+        except (InvalidOperation, AttributeError):
+            raise GatewayRoutingError("Please enter a valid amount.")
+        if value <= 0:
+            raise GatewayRoutingError("Amount must be greater than zero.")
+        if value < Decimal(str(route["min"])):
+            raise GatewayRoutingError(f"Minimum deposit is {route['min']:,} {route['currency']}.")
+        if value > Decimal(str(route["max"])):
+            raise GatewayRoutingError(
+                f"Maximum single deposit is {route['max']:,} {route['currency']}. "
+                f"Please split larger amounts into multiple deposits."
+            )
+        return value
 
     @classmethod
     async def initialize_deposit(
@@ -38,13 +122,49 @@ class PaymentGatewayRouter:
         gateway: Optional[str] = None,
         callback_url: Optional[str] = None
     ) -> Dict[str, Any]:
-        chosen_gateway = cls.select_gateway(currency, gateway)
+        route = cls.get_route(currency)
+        try:
+            validated = cls.validate_amount(currency, amount)
+        except GatewayRoutingError as e:
+            return {"status": "ERROR", "gateway": cls.select_gateway(currency, gateway),
+                    "code": "AMOUNT_OUT_OF_RANGE", "message": str(e), "route": route}
+
+        primary = cls.select_gateway(currency, gateway)
+        result = await cls._initialize_with_gateway(primary, email, validated, currency, user_id, callback_url)
+        result["route"] = route
+        result["recommended_gateway"] = route["recommended"]
+        if result.get("status") == "SUCCESS":
+            return result
+
+        # Automatic failover to the other gateway if it supports this currency
+        fallbacks = [g for g in route["supported"] if g != primary]
+        for alt in fallbacks:
+            alt_result = await cls._initialize_with_gateway(alt, email, validated, currency, user_id, callback_url)
+            if alt_result.get("status") == "SUCCESS":
+                alt_result["route"] = route
+                alt_result["recommended_gateway"] = route["recommended"]
+                alt_result["failover_from"] = primary
+                alt_result["failover_reason"] = result.get("message")
+                return alt_result
+        return result
+
+    @classmethod
+    async def _initialize_with_gateway(
+        cls,
+        chosen_gateway: str,
+        email: str,
+        validated: Decimal,
+        currency: str,
+        user_id: str,
+        callback_url: Optional[str] = None
+    ) -> Dict[str, Any]:
         tx_ref = f"paynora_{uuid.uuid4().hex[:12]}"
-        numeric_amount = float(amount)
+        numeric_amount = float(validated)
+        amount = format(validated, "f")
 
         if chosen_gateway == "PAYSTACK":
             # Paystack expects amount in minor units (kobo/cents: multiply by 100)
-            paystack_amount = int(numeric_amount * 100)
+            paystack_amount = int((validated * 100).quantize(Decimal("1")))
             headers = {
                 "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
                 "Content-Type": "application/json"
@@ -105,8 +225,7 @@ class PaymentGatewayRouter:
                 },
                 "customizations": {
                     "title": "PayNora Wallet Deposit",
-                    "description": f"Funding {currency.upper()} Wallet Balance",
-                    "logo": "http://13.48.25.254/PayNora.apk"
+                    "description": f"Funding {currency.upper()} Wallet Balance"
                 },
                 "meta": {
                     "user_id": user_id,

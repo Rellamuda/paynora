@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../config/gateway_routing.dart';
 import '../theme/design_tokens.dart';
 
 class SendScreen extends StatefulWidget {
@@ -22,6 +23,8 @@ class _SendScreenState extends State<SendScreen> {
   String _destCountry = 'NG';
   String _recipientMode = 'LOCAL'; // 'LOCAL' or 'ORIGINAL'
   String _payoutMethod = 'BANK'; // 'BANK' or 'MOMO'
+
+  String get _payoutCurrency => _recipientMode == 'LOCAL' ? _destCurrency : _sourceCurrency;
 
   Map<String, dynamic>? _quote;
   bool _calculating = false;
@@ -316,13 +319,35 @@ class _SendScreenState extends State<SendScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Builder(builder: (_) {
+                  final route = GatewayRouting.forCurrency(_payoutCurrency);
+                  final g = route.recommended;
+                  final color = g == GatewayRouting.paystack ? const Color(0xFF00C3F7) : const Color(0xFFFB9129);
+                  return Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: color.withOpacity(0.6)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_awesome, size: 16, color: color),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Smart routing: $_payoutCurrency payout via ${GatewayRouting.label(g)} · ${route.reason}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),
-
-          const SizedBox(height: 18),
-
-          // Recipient Details Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(

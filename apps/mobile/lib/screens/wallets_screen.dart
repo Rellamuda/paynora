@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../config/gateway_routing.dart';
 import '../theme/design_tokens.dart';
 import 'exchange_screen.dart';
 import 'payment_webview_screen.dart';
@@ -68,9 +69,58 @@ class _WalletsScreenState extends State<WalletsScreen> {
     }
   }
 
+  Widget _gatewayTile({
+    required String gateway,
+    required GatewayRoute route,
+    required String selected,
+    required ValueChanged<String> onSelect,
+  }) {
+    final enabled = route.supports(gateway);
+    final isSelected = selected == gateway;
+    final isBest = route.recommended == gateway;
+    final color = gateway == GatewayRouting.paystack ? const Color(0xFF00C3F7) : const Color(0xFFFB9129);
+    final title = gateway == GatewayRouting.paystack ? '⚡ Paystack' : '🌍 Flutterwave';
+    final subtitle = !enabled
+        ? 'Not available for ${route.currency}'
+        : (gateway == GatewayRouting.paystack ? 'Cards, USSD, Bank' : 'Global, USD, MoMo');
+
+    return Expanded(
+      child: Opacity(
+        opacity: enabled ? 1 : 0.4,
+        child: GestureDetector(
+          onTap: enabled ? () => onSelect(gateway) : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isSelected ? color : Colors.grey.withOpacity(0.3), width: isSelected ? 2 : 1),
+            ),
+            child: Column(
+              children: [
+                if (isBest)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: PayNoraColors.brandSecondary, borderRadius: BorderRadius.circular(4)),
+                    child: Text('BEST FOR ${route.currency}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                  ),
+                Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDepositDialog(String currency) {
-    final controller = TextEditingController(text: currency == 'NGN' ? '5000' : '50');
-    String chosenGateway = currency == 'NGN' ? 'PAYSTACK' : 'FLUTTERWAVE';
+    final route = GatewayRouting.forCurrency(currency);
+    final controller = TextEditingController(text: GatewayRouting.defaultAmount(currency));
+    String chosenGateway = route.recommended;
+    String? amountError = route.validate(controller.text);
     final isDark = ThemeNotifier.instance.isDarkMode;
     bool isProcessing = false;
 
@@ -104,56 +154,44 @@ class _WalletsScreenState extends State<WalletsScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: controller,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (v) => setModalState(() => amountError = route.validate(v)),
                 decoration: InputDecoration(
                   labelText: 'Amount ($currency)',
+                  helperText: route.limitsLabel,
+                  errorText: amountError,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Payment Gateway (Smart Dual Rail)', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('Payment Gateway (Smart Routing)', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setModalState(() => chosenGateway = 'PAYSTACK'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: chosenGateway == 'PAYSTACK' ? const Color(0xFF00C3F7).withOpacity(0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: chosenGateway == 'PAYSTACK' ? const Color(0xFF00C3F7) : Colors.grey.withOpacity(0.3), width: chosenGateway == 'PAYSTACK' ? 2 : 1),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('⚡ Paystack', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            const SizedBox(height: 2),
-                            Text('Cards, USSD, Bank', style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
-                          ],
-                        ),
-                      ),
-                    ),
+                  _gatewayTile(
+                    gateway: GatewayRouting.paystack,
+                    route: route,
+                    selected: chosenGateway,
+                    onSelect: (g) => setModalState(() => chosenGateway = g),
                   ),
                   const SizedBox(width: 8),
+                  _gatewayTile(
+                    gateway: GatewayRouting.flutterwave,
+                    route: route,
+                    selected: chosenGateway,
+                    onSelect: (g) => setModalState(() => chosenGateway = g),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome, size: 14, color: PayNoraColors.brandSecondary),
+                  const SizedBox(width: 6),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => setModalState(() => chosenGateway = 'FLUTTERWAVE'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: chosenGateway == 'FLUTTERWAVE' ? const Color(0xFFFB9129).withOpacity(0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: chosenGateway == 'FLUTTERWAVE' ? const Color(0xFFFB9129) : Colors.grey.withOpacity(0.3), width: chosenGateway == 'FLUTTERWAVE' ? 2 : 1),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('🌍 Flutterwave', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            const SizedBox(height: 2),
-                            Text('Global, USD, MoMo', style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
-                          ],
-                        ),
-                      ),
+                    child: Text(
+                      '${GatewayRouting.label(route.recommended)} selected automatically · ${route.reason}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                     ),
                   ),
                 ],
@@ -168,7 +206,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: isProcessing ? null : () async {
+                  onPressed: (isProcessing || amountError != null) ? null : () async {
                     setModalState(() => isProcessing = true);
                     try {
                       final initRes = await _api.initializeDeposit(
@@ -179,72 +217,62 @@ class _WalletsScreenState extends State<WalletsScreen> {
 
                       if (initRes['status'] == 'SUCCESS' && initRes['checkout_url'] != null) {
                         Navigator.pop(context);
-                        final checkoutUrl = initRes['checkout_url'];
-                        final reference = initRes['reference'];
-                        final gateway = initRes['gateway'];
+                        final String checkoutUrl = initRes['checkout_url'];
+                        final String reference = initRes['reference'];
+                        final String gateway = initRes['gateway'];
+                        final String amount = (initRes['amount'] ?? controller.text).toString();
 
-                        // 1. Open in-app dedicated checkout WebView directly inside PayNora
+                        if (initRes['failover_from'] != null) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
+                            content: Text('${GatewayRouting.label(initRes['failover_from'])} unavailable for $currency — switched to ${GatewayRouting.label(gateway)} automatically.'),
+                          ));
+                        }
+
+                        // Open in-app dedicated checkout WebView directly inside PayNora
                         final bool? completed = await Navigator.push<bool>(
-                          context,
+                          this.context,
                           MaterialPageRoute(
-                            builder: (context) => PaymentWebviewScreen(
+                            builder: (_) => PaymentWebviewScreen(
                               checkoutUrl: checkoutUrl,
                               gateway: gateway,
                               reference: reference,
                               currency: currency,
-                              amount: controller.text,
+                              amount: amount,
                             ),
                           ),
                         );
 
+                        if (!mounted) return;
                         if (completed == true) {
-                          try {
-                            await _api.verifyDeposit(reference: reference, gateway: gateway, currency: currency);
-                          } catch (_) {}
-                          await _api.fundWallet(currency, controller.text);
-                          _loadWallets();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Deposit of ${controller.text} $currency confirmed!')),
-                          );
+                          await _confirmDeposit(reference: reference, gateway: gateway, currency: currency, amount: amount, checkoutUrl: checkoutUrl);
                         } else {
-                          // Show verification bottom sheet for pending confirmation
                           _showCheckoutBottomSheet(
                             checkoutUrl: checkoutUrl,
                             reference: reference,
                             gateway: gateway,
                             currency: currency,
-                            amount: controller.text,
+                            amount: amount,
                           );
                         }
                       } else {
-                        setModalState(() => isProcessing = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        setModalState(() {
+                          isProcessing = false;
+                          if (initRes['code'] == 'AMOUNT_OUT_OF_RANGE') amountError = initRes['message'];
+                        });
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(content: Text(initRes['message'] ?? 'Could not initialize payment.')),
                         );
                       }
                     } catch (e) {
                       setModalState(() => isProcessing = false);
-                      Navigator.pop(context);
-                      final fallbackUrl = chosenGateway == 'PAYSTACK'
-                          ? 'https://checkout.paystack.com'
-                          : 'https://flutterwave.com/pay';
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PaymentWebviewScreen(
-                            checkoutUrl: fallbackUrl,
-                            gateway: chosenGateway,
-                            reference: 'paynora_${DateTime.now().millisecondsSinceEpoch}',
-                            currency: currency,
-                            amount: controller.text,
-                          ),
-                        ),
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(content: Text('Could not reach the payment server. Check your connection and try again.')),
                       );
                     }
                   },
                   child: isProcessing
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('Proceed to $chosenGateway', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      : Text('Proceed with ${GatewayRouting.label(chosenGateway)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],
@@ -252,6 +280,32 @@ class _WalletsScreenState extends State<WalletsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeposit({
+    required String reference,
+    required String gateway,
+    required String currency,
+    required String amount,
+    required String checkoutUrl,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text('Verifying payment with ${GatewayRouting.label(gateway)}...'), duration: const Duration(seconds: 2)));
+    try {
+      final res = await _api.verifyDeposit(reference: reference, gateway: gateway, currency: currency);
+      if (!mounted) return;
+      if (res['status'] == 'SUCCESS') {
+        final credited = res['verification']?['amount'] ?? amount;
+        await _loadWallets();
+        messenger.showSnackBar(SnackBar(content: Text('Deposit of $credited $currency confirmed and credited!')));
+        return;
+      }
+      messenger.showSnackBar(const SnackBar(content: Text('Payment not confirmed yet. Complete checkout, then tap "I Have Completed Payment".')));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(content: Text('Could not verify payment right now. Please try again.')));
+    }
+    _showCheckoutBottomSheet(checkoutUrl: checkoutUrl, reference: reference, gateway: gateway, currency: currency, amount: amount);
   }
 
   void _showCheckoutBottomSheet({
@@ -338,15 +392,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 ),
                 onPressed: () async {
                   Navigator.pop(context);
-                  // Call verify
-                  try {
-                    await _api.verifyDeposit(reference: reference, gateway: gateway, currency: currency);
-                  } catch (_) {}
-                  await _api.fundWallet(currency, amount);
-                  _loadWallets();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Deposit of $amount $currency confirmed!')),
-                  );
+                  await _confirmDeposit(reference: reference, gateway: gateway, currency: currency, amount: amount, checkoutUrl: checkoutUrl);
                 },
                 child: const Text('I Have Completed Payment', style: TextStyle(fontWeight: FontWeight.bold)),
               ),

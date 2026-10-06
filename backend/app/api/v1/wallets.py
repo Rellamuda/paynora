@@ -51,6 +51,18 @@ class VerifyDepositPayload(BaseModel):
     gateway: str
     currency: str
 
+@router.get("/gateway-routing")
+def gateway_routing_table():
+    """Smart gateway routing table: recommended/supported gateway and limits per currency."""
+    from app.providers.payment import PaymentGatewayRouter
+    return {"routes": PaymentGatewayRouter.routing_table()}
+
+@router.get("/gateway-routing/{currency}")
+def gateway_route_for_currency(currency: str):
+    """Recommended gateway and limits for a single currency."""
+    from app.providers.payment import PaymentGatewayRouter
+    return PaymentGatewayRouter.get_route(currency)
+
 @router.post("/deposit/initialize")
 async def initialize_deposit(
     payload: InitializeDepositPayload,

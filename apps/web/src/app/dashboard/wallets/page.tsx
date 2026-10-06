@@ -25,6 +25,21 @@ const DEFAULT_WALLETS = [
   { currency: 'AED', available_balance: '6,200.00', status: 'ACTIVE' },
 ];
 
+const ROUTING_TABLE: Record<string, { recommended: 'PAYSTACK' | 'FLUTTERWAVE'; supported: ('PAYSTACK' | 'FLUTTERWAVE')[]; min: number; max: number; reason: string }> = {
+  NGN: { recommended: 'PAYSTACK', supported: ['PAYSTACK', 'FLUTTERWAVE'], min: 100, max: 5000000, reason: 'Best Nigerian card, bank transfer & USSD success rates' },
+  GHS: { recommended: 'PAYSTACK', supported: ['PAYSTACK', 'FLUTTERWAVE'], min: 1, max: 50000, reason: 'Native Ghana card & mobile money rails' },
+  ZAR: { recommended: 'PAYSTACK', supported: ['PAYSTACK', 'FLUTTERWAVE'], min: 10, max: 60000, reason: 'Native South African card & EFT rails' },
+  KES: { recommended: 'PAYSTACK', supported: ['PAYSTACK', 'FLUTTERWAVE'], min: 10, max: 450000, reason: 'Native Kenya card & M-Pesa rails' },
+  USD: { recommended: 'FLUTTERWAVE', supported: ['FLUTTERWAVE'], min: 1, max: 4500, reason: 'Global multi-currency card acquiring' },
+  GBP: { recommended: 'FLUTTERWAVE', supported: ['FLUTTERWAVE'], min: 1, max: 3500, reason: 'Global multi-currency card acquiring' },
+  EUR: { recommended: 'FLUTTERWAVE', supported: ['FLUTTERWAVE'], min: 1, max: 4000, reason: 'Global multi-currency card acquiring' },
+  CAD: { recommended: 'FLUTTERWAVE', supported: ['FLUTTERWAVE'], min: 1, max: 6000, reason: 'Global multi-currency card acquiring' },
+};
+
+function getRouteInfo(currency: string) {
+  return ROUTING_TABLE[currency.toUpperCase()] || { recommended: 'FLUTTERWAVE' as const, supported: ['FLUTTERWAVE' as const], min: 1, max: 4500, reason: 'Global multi-currency coverage' };
+}
+
 export default function WalletsPage() {
   const [token, setToken] = useState<string | null>(null);
   const [wallets, setWallets] = useState<any[]>(DEFAULT_WALLETS);
@@ -33,8 +48,16 @@ export default function WalletsPage() {
   // Deposit modal
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundCurrency, setFundCurrency] = useState('NGN');
-  const [fundAmount, setFundAmount] = useState('100000');
+  const [fundAmount, setFundAmount] = useState('5000');
   const [fundLoading, setFundLoading] = useState(false);
+
+  const openFundModal = (currency: string) => {
+    const route = getRouteInfo(currency);
+    setFundCurrency(currency);
+    setFundAmount(currency === 'NGN' ? '5000' : '50');
+    setSelectedGateway(route.recommended);
+    setShowFundModal(true);
+  };
 
   // Convert modal
   const [showConvertModal, setShowConvertModal] = useState(false);
@@ -166,10 +189,7 @@ export default function WalletsPage() {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
-            onClick={() => {
-              setFundCurrency('NGN');
-              setShowFundModal(true);
-            }}
+            onClick={() => openFundModal('NGN')}
             style={{ padding: '12px 20px', background: '#00C853', color: '#FFF', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             + Deposit Funds
@@ -217,10 +237,7 @@ export default function WalletsPage() {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
-                  onClick={() => {
-                    setFundCurrency(w.currency);
-                    setShowFundModal(true);
-                  }}
+                  onClick={() => openFundModal(w.currency)}
                   style={{ flex: 1, padding: '10px', background: '#00C853', color: '#FFF', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   + Deposit
@@ -241,69 +258,117 @@ export default function WalletsPage() {
       </div>
 
       {/* FUND MODAL */}
-      {showFundModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
-          <div style={{ background: 'var(--bg-card)', borderRadius: '20px', width: '100%', maxWidth: '460px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.35)' }}>
-            {!checkoutSession ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Deposit Funds ({fundCurrency})</h3>
-                  <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(0,200,83,0.15)', color: '#00C853', padding: '4px 8px', borderRadius: '6px' }}>LIVE RAILS</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>Choose your payment gateway rail to fund your account.</p>
+      {showFundModal && (() => {
+        const route = getRouteInfo(fundCurrency);
+        const numAmt = parseFloat(fundAmount || '0');
+        const amountError = isNaN(numAmt) || numAmt <= 0 ? 'Enter a valid amount' : numAmt < route.min ? `Minimum deposit is ${route.min.toLocaleString()} ${fundCurrency}` : numAmt > route.max ? `Maximum single deposit is ${route.max.toLocaleString()} ${fundCurrency}` : null;
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: '20px', width: '100%', maxWidth: '460px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.35)' }}>
+              {!checkoutSession ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Deposit Funds ({fundCurrency})</h3>
+                    <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(0,200,83,0.15)', color: '#00C853', padding: '4px 8px', borderRadius: '6px' }}>LIVE RAILS</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>Smart gateway engine automatically selects optimal rails for {fundCurrency}.</p>
 
-                <div style={{ marginBottom: '18px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>Amount ({fundCurrency})</label>
-                  <input
-                    type="number"
-                    value={fundAmount}
-                    onChange={e => setFundAmount(e.target.value)}
-                    style={{ width: '100%', padding: '12px', fontSize: '16px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text-main)', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Select Payment Gateway</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div
-                      onClick={() => setSelectedGateway('PAYSTACK')}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: selectedGateway === 'PAYSTACK' ? '2px solid #00C3F7' : '1px solid var(--border-color)',
-                        background: selectedGateway === 'PAYSTACK' ? 'rgba(0,195,247,0.15)' : 'var(--bg-card-subtle)',
-                        cursor: 'pointer',
-                        textAlign: 'center'
-                      }}
-                    >
-                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px' }}>⚡ Paystack</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Cards, USSD, Bank</div>
+                  <div style={{ marginBottom: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>Amount ({fundCurrency})</label>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Limits: {route.min.toLocaleString()} - {route.max.toLocaleString()} {fundCurrency}</span>
                     </div>
-                    <div
-                      onClick={() => setSelectedGateway('FLUTTERWAVE')}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: selectedGateway === 'FLUTTERWAVE' ? '2px solid #FB9129' : '1px solid var(--border-color)',
-                        background: selectedGateway === 'FLUTTERWAVE' ? 'rgba(251,145,41,0.15)' : 'var(--bg-card-subtle)',
-                        cursor: 'pointer',
-                        textAlign: 'center'
-                      }}
-                    >
-                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px' }}>🌍 Flutterwave</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Global, USD, MoMo</div>
+                    <input
+                      type="number"
+                      value={fundAmount}
+                      onChange={e => setFundAmount(e.target.value)}
+                      style={{ width: '100%', padding: '12px', fontSize: '16px', border: amountError ? '2px solid #FF5252' : '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                    />
+                    {amountError && (
+                      <div style={{ color: '#FF5252', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>⚠️ {amountError}</div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Payment Gateway (Smart Routing)</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      {/* Paystack Tile */}
+                      {(() => {
+                        const isSupp = route.supported.includes('PAYSTACK');
+                        const isBest = route.recommended === 'PAYSTACK';
+                        const isSel = selectedGateway === 'PAYSTACK';
+                        return (
+                          <div
+                            onClick={() => isSupp && setSelectedGateway('PAYSTACK')}
+                            style={{
+                              padding: '12px',
+                              borderRadius: '10px',
+                              border: isSel ? '2px solid #00C3F7' : '1px solid var(--border-color)',
+                              background: isSel ? 'rgba(0,195,247,0.15)' : 'var(--bg-card-subtle)',
+                              cursor: isSupp ? 'pointer' : 'not-allowed',
+                              opacity: isSupp ? 1 : 0.4,
+                              textAlign: 'center',
+                              position: 'relative'
+                            }}
+                          >
+                            {isBest && (
+                              <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                BEST FOR {fundCurrency}
+                              </span>
+                            )}
+                            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: isBest ? '4px' : '0' }}>⚡ Paystack</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {isSupp ? 'Cards, Bank, USSD' : `N/A for ${fundCurrency}`}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Flutterwave Tile */}
+                      {(() => {
+                        const isSupp = route.supported.includes('FLUTTERWAVE');
+                        const isBest = route.recommended === 'FLUTTERWAVE';
+                        const isSel = selectedGateway === 'FLUTTERWAVE';
+                        return (
+                          <div
+                            onClick={() => isSupp && setSelectedGateway('FLUTTERWAVE')}
+                            style={{
+                              padding: '12px',
+                              borderRadius: '10px',
+                              border: isSel ? '2px solid #FB9129' : '1px solid var(--border-color)',
+                              background: isSel ? 'rgba(251,145,41,0.15)' : 'var(--bg-card-subtle)',
+                              cursor: isSupp ? 'pointer' : 'not-allowed',
+                              opacity: isSupp ? 1 : 0.4,
+                              textAlign: 'center',
+                              position: 'relative'
+                            }}
+                          >
+                            {isBest && (
+                              <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                BEST FOR {fundCurrency}
+                              </span>
+                            )}
+                            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: isBest ? '4px' : '0' }}>🌍 Flutterwave</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {isSupp ? 'Global, USD, MoMo' : `N/A for ${fundCurrency}`}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>✨</span> <strong>{selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}</strong> auto-selected · {route.reason}
                     </div>
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setShowFundModal(false)} style={{ flex: 1, padding: '12px', background: 'var(--bg-card-subtle)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={handleFund} disabled={fundLoading} style={{ flex: 1, padding: '12px', background: '#00C853', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>
-                    {fundLoading ? 'Connecting...' : `Proceed with ${selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}`}
-                  </button>
-                </div>
-              </>
-            ) : (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setShowFundModal(false)} style={{ flex: 1, padding: '12px', background: 'var(--bg-card-subtle)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={handleFund} disabled={fundLoading || !!amountError} style={{ flex: 1, padding: '12px', background: amountError ? '#CCC' : '#00C853', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: amountError ? 'not-allowed' : 'pointer' }}>
+                      {fundLoading ? 'Connecting...' : `Proceed with ${selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}`}
+                    </button>
+                  </div>
+                </>
+              ) : (
               <>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '40px', marginBottom: '8px' }}>🛡️</div>

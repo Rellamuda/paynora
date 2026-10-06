@@ -15,6 +15,8 @@ class CreateTransferRequest(BaseModel):
     source_country: str = "NG"
     destination_country: str = "GB"
     recipient_currency_mode: str = "CHOICE"
+    destination_currency: str | None = None
+    gateway: str | None = None
 
 class SelectRecipientCurrencyRequest(BaseModel):
     selected_currency: str
@@ -87,15 +89,22 @@ def create_transfer(
         raise HTTPException(status_code=400, detail=f"Invalid transfer amount: {str(e)}")
 
     transfer_id = f"trf_{uuid.uuid4().hex[:12]}"
+    from app.providers.payment import PaymentGatewayRouter
+    payout_currency = (payload.destination_currency or payload.source_currency).upper()
+    payout_route = PaymentGatewayRouter.get_route(payout_currency)
+    payout_gateway = PaymentGatewayRouter.select_gateway(payout_currency, payload.gateway)
     response_data = {
         "transfer_id": transfer_id,
         "idempotency_key": idempotency_key,
         "source_currency": payload.source_currency.upper(),
         "source_amount": str(amount),
+        "destination_currency": payout_currency,
         "recipient_name": payload.recipient_name,
         "source_country": payload.source_country.upper(),
         "destination_country": payload.destination_country.upper(),
         "recipient_currency_mode": payload.recipient_currency_mode,
+        "payout_gateway": payout_gateway,
+        "payout_gateway_reason": payout_route["reason"],
         "state": TransferState.PROCESSING,
         "estimated_fee": "500.00",
         "created_at": "2026-10-05T08:00:00Z"
