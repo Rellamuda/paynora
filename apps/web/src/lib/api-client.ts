@@ -100,6 +100,42 @@ export async function fundWallet(currency: string, amount: string, token: string
   return res.json();
 }
 
+export async function initializeDeposit(payload: {
+  currency: string;
+  amount: string;
+  gateway?: string;
+}, token: string) {
+  const url = `${getApiBaseUrl()}/wallets/deposit/initialize`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Payment gateway initialization failed');
+  return res.json();
+}
+
+export async function verifyDeposit(payload: {
+  reference: string;
+  gateway: string;
+  currency: string;
+}, token: string) {
+  const url = `${getApiBaseUrl()}/wallets/deposit/verify`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Verification failed');
+  return res.json();
+}
+
 export async function convertWallet(
   fromCurrency: string,
   toCurrency: string,
