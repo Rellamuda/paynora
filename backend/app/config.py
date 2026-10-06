@@ -36,5 +36,6 @@ class Settings(BaseSettings):
     FLW_SECRET_KEY: str = os.getenv("FLW_SECRET_KEY", "")
     FLW_PUBLIC_KEY: str = os.getenv("FLW_PUBLIC_KEY", "")
     FLW_ENCRYPTION_KEY: str = os.getenv("FLW_ENCRYPTION_KEY", "")
+    FLW_WEBHOOK_HASH: str = os.getenv("FLW_WEBHOOK_HASH", "paynora_flutterwave_webhook_secret_2026")
 
 settings = Settings()

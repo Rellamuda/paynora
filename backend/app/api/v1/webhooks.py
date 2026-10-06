@@ -61,18 +61,23 @@ async def handle_provider_webhook(
 
     elif provider_name == "flutterwave":
         secret_hash = request.headers.get("verif-hash")
-        # In Flutterwave dashboard, user can set secret verification hash
+        expected_hash = settings.FLW_WEBHOOK_HASH
+        if expected_hash and secret_hash != expected_hash:
+            raise HTTPException(status_code=400, detail="Invalid Flutterwave verification hash")
+
         event = payload.get("event")
-        if event == "charge.completed" or payload.get("status") == "successful":
-            data = payload.get("data", payload)
+        data = payload.get("data", payload)
+        charge_status = data.get("status") or payload.get("status")
+
+        if (event == "charge.completed" or event == "charge.successful") and charge_status == "successful":
             user_id = data.get("meta", {}).get("user_id") or data.get("customer", {}).get("id")
             amount = str(data.get("amount", "0"))
-            currency = data.get("currency", "USD")
+            currency = (data.get("currency") or "USD").upper()
             if user_id:
                 try:
                     WalletEngine.fund_wallet(str(user_id), currency, amount)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"Error auto-crediting wallet via Flutterwave webhook: {e}")
 
     event_type = payload.get("event", payload.get("event_type", f"{provider}.update"))
     data = payload.get("data", payload)
