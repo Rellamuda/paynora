@@ -258,117 +258,115 @@ export default function WalletsPage() {
       </div>
 
       {/* FUND MODAL */}
-      {showFundModal && (() => {
-        const route = getRouteInfo(fundCurrency);
-        const numAmt = parseFloat(fundAmount || '0');
-        const amountError = isNaN(numAmt) || numAmt <= 0 ? 'Enter a valid amount' : numAmt < route.min ? `Minimum deposit is ${route.min.toLocaleString()} ${fundCurrency}` : numAmt > route.max ? `Maximum single deposit is ${route.max.toLocaleString()} ${fundCurrency}` : null;
-        return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
-            <div style={{ background: 'var(--bg-card)', borderRadius: '20px', width: '100%', maxWidth: '460px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.35)' }}>
-              {!checkoutSession ? (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Deposit Funds ({fundCurrency})</h3>
-                    <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(0,200,83,0.15)', color: '#00C853', padding: '4px 8px', borderRadius: '6px' }}>LIVE RAILS</span>
+      {showFundModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '20px', width: '100%', maxWidth: '460px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.35)' }}>
+            {!checkoutSession ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Deposit Funds ({fundCurrency})</h3>
+                  <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(0,200,83,0.15)', color: '#00C853', padding: '4px 8px', borderRadius: '6px' }}>LIVE RAILS</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>Smart gateway engine automatically selects optimal rails for {fundCurrency}.</p>
+
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>Amount ({fundCurrency})</label>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Limits: {getRouteInfo(fundCurrency).min.toLocaleString()} - {getRouteInfo(fundCurrency).max.toLocaleString()} {fundCurrency}</span>
                   </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>Smart gateway engine automatically selects optimal rails for {fundCurrency}.</p>
+                  <input
+                    type="number"
+                    value={fundAmount}
+                    onChange={e => setFundAmount(e.target.value)}
+                    style={{ width: '100%', padding: '12px', fontSize: '16px', border: (() => { const r = getRouteInfo(fundCurrency); const n = parseFloat(fundAmount || '0'); return (isNaN(n) || n < r.min || n > r.max) ? '2px solid #FF5252' : '1px solid var(--border-color)'; })(), borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                  {(() => {
+                    const r = getRouteInfo(fundCurrency);
+                    const n = parseFloat(fundAmount || '0');
+                    const err = isNaN(n) || n <= 0 ? 'Enter a valid amount' : n < r.min ? `Minimum deposit is ${r.min.toLocaleString()} ${fundCurrency}` : n > r.max ? `Maximum single deposit is ${r.max.toLocaleString()} ${fundCurrency}` : null;
+                    return err ? <div style={{ color: '#FF5252', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>⚠️ {err}</div> : null;
+                  })()}
+                </div>
 
-                  <div style={{ marginBottom: '18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>Amount ({fundCurrency})</label>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Limits: {route.min.toLocaleString()} - {route.max.toLocaleString()} {fundCurrency}</span>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Payment Gateway (Smart Routing)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    {/* Paystack Tile */}
+                    <div
+                      onClick={() => getRouteInfo(fundCurrency).supported.includes('PAYSTACK') && setSelectedGateway('PAYSTACK')}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: selectedGateway === 'PAYSTACK' ? '2px solid #00C3F7' : '1px solid var(--border-color)',
+                        background: selectedGateway === 'PAYSTACK' ? 'rgba(0,195,247,0.15)' : 'var(--bg-card-subtle)',
+                        cursor: getRouteInfo(fundCurrency).supported.includes('PAYSTACK') ? 'pointer' : 'not-allowed',
+                        opacity: getRouteInfo(fundCurrency).supported.includes('PAYSTACK') ? 1 : 0.4,
+                        textAlign: 'center',
+                        position: 'relative'
+                      }}
+                    >
+                      {getRouteInfo(fundCurrency).recommended === 'PAYSTACK' && (
+                        <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                          BEST FOR {fundCurrency}
+                        </span>
+                      )}
+                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: getRouteInfo(fundCurrency).recommended === 'PAYSTACK' ? '4px' : '0' }}>⚡ Paystack</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {getRouteInfo(fundCurrency).supported.includes('PAYSTACK') ? 'Cards, Bank, USSD' : `N/A for ${fundCurrency}`}
+                      </div>
                     </div>
-                    <input
-                      type="number"
-                      value={fundAmount}
-                      onChange={e => setFundAmount(e.target.value)}
-                      style={{ width: '100%', padding: '12px', fontSize: '16px', border: amountError ? '2px solid #FF5252' : '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text-main)', boxSizing: 'border-box' }}
-                    />
-                    {amountError && (
-                      <div style={{ color: '#FF5252', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>⚠️ {amountError}</div>
-                    )}
-                  </div>
 
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Payment Gateway (Smart Routing)</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      {/* Paystack Tile */}
-                      {(() => {
-                        const isSupp = route.supported.includes('PAYSTACK');
-                        const isBest = route.recommended === 'PAYSTACK';
-                        const isSel = selectedGateway === 'PAYSTACK';
-                        return (
-                          <div
-                            onClick={() => isSupp && setSelectedGateway('PAYSTACK')}
-                            style={{
-                              padding: '12px',
-                              borderRadius: '10px',
-                              border: isSel ? '2px solid #00C3F7' : '1px solid var(--border-color)',
-                              background: isSel ? 'rgba(0,195,247,0.15)' : 'var(--bg-card-subtle)',
-                              cursor: isSupp ? 'pointer' : 'not-allowed',
-                              opacity: isSupp ? 1 : 0.4,
-                              textAlign: 'center',
-                              position: 'relative'
-                            }}
-                          >
-                            {isBest && (
-                              <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                BEST FOR {fundCurrency}
-                              </span>
-                            )}
-                            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: isBest ? '4px' : '0' }}>⚡ Paystack</div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              {isSupp ? 'Cards, Bank, USSD' : `N/A for ${fundCurrency}`}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Flutterwave Tile */}
-                      {(() => {
-                        const isSupp = route.supported.includes('FLUTTERWAVE');
-                        const isBest = route.recommended === 'FLUTTERWAVE';
-                        const isSel = selectedGateway === 'FLUTTERWAVE';
-                        return (
-                          <div
-                            onClick={() => isSupp && setSelectedGateway('FLUTTERWAVE')}
-                            style={{
-                              padding: '12px',
-                              borderRadius: '10px',
-                              border: isSel ? '2px solid #FB9129' : '1px solid var(--border-color)',
-                              background: isSel ? 'rgba(251,145,41,0.15)' : 'var(--bg-card-subtle)',
-                              cursor: isSupp ? 'pointer' : 'not-allowed',
-                              opacity: isSupp ? 1 : 0.4,
-                              textAlign: 'center',
-                              position: 'relative'
-                            }}
-                          >
-                            {isBest && (
-                              <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                BEST FOR {fundCurrency}
-                              </span>
-                            )}
-                            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: isBest ? '4px' : '0' }}>🌍 Flutterwave</div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              {isSupp ? 'Global, USD, MoMo' : `N/A for ${fundCurrency}`}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>✨</span> <strong>{selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}</strong> auto-selected · {route.reason}
+                    {/* Flutterwave Tile */}
+                    <div
+                      onClick={() => getRouteInfo(fundCurrency).supported.includes('FLUTTERWAVE') && setSelectedGateway('FLUTTERWAVE')}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: selectedGateway === 'FLUTTERWAVE' ? '2px solid #FB9129' : '1px solid var(--border-color)',
+                        background: selectedGateway === 'FLUTTERWAVE' ? 'rgba(251,145,41,0.15)' : 'var(--bg-card-subtle)',
+                        cursor: getRouteInfo(fundCurrency).supported.includes('FLUTTERWAVE') ? 'pointer' : 'not-allowed',
+                        opacity: getRouteInfo(fundCurrency).supported.includes('FLUTTERWAVE') ? 1 : 0.4,
+                        textAlign: 'center',
+                        position: 'relative'
+                      }}
+                    >
+                      {getRouteInfo(fundCurrency).recommended === 'FLUTTERWAVE' && (
+                        <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', background: '#00C853', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                          BEST FOR {fundCurrency}
+                        </span>
+                      )}
+                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '14px', marginTop: getRouteInfo(fundCurrency).recommended === 'FLUTTERWAVE' ? '4px' : '0' }}>🌍 Flutterwave</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {getRouteInfo(fundCurrency).supported.includes('FLUTTERWAVE') ? 'Global, USD, MoMo' : `N/A for ${fundCurrency}`}
+                      </div>
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => setShowFundModal(false)} style={{ flex: 1, padding: '12px', background: 'var(--bg-card-subtle)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={handleFund} disabled={fundLoading || !!amountError} style={{ flex: 1, padding: '12px', background: amountError ? '#CCC' : '#00C853', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: amountError ? 'not-allowed' : 'pointer' }}>
-                      {fundLoading ? 'Connecting...' : `Proceed with ${selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}`}
-                    </button>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>✨</span> <strong>{selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}</strong> auto-selected · {getRouteInfo(fundCurrency).reason}
                   </div>
-                </>
-              ) : (
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setShowFundModal(false)} style={{ flex: 1, padding: '12px', background: 'var(--bg-card-subtle)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  <button
+                    onClick={handleFund}
+                    disabled={fundLoading || (() => { const r = getRouteInfo(fundCurrency); const n = parseFloat(fundAmount || '0'); return isNaN(n) || n < r.min || n > r.max; })()}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: (() => { const r = getRouteInfo(fundCurrency); const n = parseFloat(fundAmount || '0'); return isNaN(n) || n < r.min || n > r.max; })() ? '#CCC' : '#00C853',
+                      color: '#FFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      cursor: (() => { const r = getRouteInfo(fundCurrency); const n = parseFloat(fundAmount || '0'); return isNaN(n) || n < r.min || n > r.max; })() ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {fundLoading ? 'Connecting...' : `Proceed with ${selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}`}
+                  </button>
+                </div>
+              </>
+            ) : (
               <>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '40px', marginBottom: '8px' }}>🛡️</div>
@@ -432,7 +430,7 @@ export default function WalletsPage() {
             )}
           </div>
         </div>
-      )()}
+      )}
 
       {/* CONVERT MODAL */}
       {showConvertModal && (
