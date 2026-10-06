@@ -182,6 +182,15 @@ class _WalletsScreenState extends State<WalletsScreen> {
                         final reference = initRes['reference'];
                         final gateway = initRes['gateway'];
 
+                        // 1. Immediately launch browser window for seamless experience
+                        try {
+                          final uri = Uri.parse(checkoutUrl);
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (err) {
+                          debugPrint('Error launching url directly: $err');
+                        }
+
+                        // 2. Present verification and return confirmation sheet
                         _showCheckoutBottomSheet(
                           checkoutUrl: checkoutUrl,
                           reference: reference,
@@ -196,12 +205,9 @@ class _WalletsScreenState extends State<WalletsScreen> {
                         );
                       }
                     } catch (e) {
-                      // Fallback simulated credit if server is offline
-                      Navigator.pop(context);
-                      await _api.fundWallet(currency, controller.text);
-                      _loadWallets();
+                      setModalState(() => isProcessing = false);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Funded $currency wallet with ${controller.text} (Offline Fallback)')),
+                        SnackBar(content: Text('Payment error: $e')),
                       );
                     }
                   },
