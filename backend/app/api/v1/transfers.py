@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Header, HTTPException, status
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from decimal import Decimal
 import uuid
 from typing import List
 from app.transfers.state_machine import TransferState
 from app.events.kafka import event_publisher
+from app.notifications.service import NotificationService
+from app.receipts.generator import ReceiptGenerator
 
 router = APIRouter(prefix="/transfers", tags=["Transfers"])
 
@@ -70,6 +73,23 @@ def get_transfer(transfer_id: str):
             return tx
     raise HTTPException(status_code=404, detail="Transfer not found")
 
+@router.get("/{transfer_id}/receipt")
+def get_transfer_receipt(transfer_id: str):
+    """Retrieve structured financial receipt payload for a transfer."""
+    for tx in TRANSFERS_LIST:
+        if tx["transfer_id"] == transfer_id:
+            return ReceiptGenerator.generate_receipt_data(tx)
+    raise HTTPException(status_code=404, detail="Transfer not found")
+
+@router.get("/{transfer_id}/receipt/html", response_class=HTMLResponse)
+def get_transfer_receipt_html(transfer_id: str):
+    """Retrieve official printable HTML receipt for a transfer."""
+    for tx in TRANSFERS_LIST:
+        if tx["transfer_id"] == transfer_id:
+            data = ReceiptGenerator.generate_receipt_data(tx)
+            return ReceiptGenerator.generate_html_receipt(data)
+    raise HTTPException(status_code=404, detail="Transfer not found")
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_transfer(
     payload: CreateTransferRequest,
@@ -107,12 +127,21 @@ def create_transfer(
         "payout_gateway_reason": payout_route["reason"],
         "state": TransferState.PROCESSING,
         "estimated_fee": "500.00",
-        "created_at": "2026-10-05T08:00:00Z"
+        "created_at": "2026-10-06T22:00:00Z"
     }
 
     IDEMPOTENCY_CACHE[idempotency_key] = response_data
     TRANSFERS_LIST.insert(0, response_data)
     event_publisher.publish_event("TransferCreated", response_data)
+
+    # Dispatch notification alert
+    NotificationService.dispatch(
+        user_id="usr_demo",
+        title="Transfer Initiated",
+        message=f"Transfer of {payload.source_currency.upper()} {payload.source_amount} to {payload.recipient_name} is processing.",
+        notification_type="DEBIT_ALERT",
+        data={"transfer_id": transfer_id, "amount": str(amount), "currency": payload.source_currency.upper()}
+    )
 
     return response_data
 
@@ -123,6 +152,16 @@ def confirm_transfer(transfer_id: str):
         if tx["transfer_id"] == transfer_id:
             tx["state"] = TransferState.COMPLETED
             event_publisher.publish_event("TransferConfirmed", {"transfer_id": transfer_id, "state": "COMPLETED"})
+
+            # Dispatch success notification alert
+            NotificationService.dispatch(
+                user_id="usr_demo",
+                title="Transfer Disbursed Successfully",
+                message=f"Transfer {transfer_id} to {tx.get('recipient_name', 'recipient')} has completed.",
+                notification_type="TRANSFER_SUCCESS",
+                data={"transfer_id": transfer_id, "receipt_url": f"/api/v1/transfers/{transfer_id}/receipt"}
+            )
+
             return {"status": "SUCCESS", "transfer": tx}
     raise HTTPException(status_code=404, detail="Transfer not found")
 

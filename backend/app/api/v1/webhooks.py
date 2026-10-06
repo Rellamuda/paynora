@@ -65,6 +65,14 @@ async def handle_provider_webhook(
             if user_id:
                 try:
                     WalletEngine.fund_wallet(str(user_id), currency, amount)
+                    from app.notifications.service import NotificationService
+                    NotificationService.dispatch(
+                        user_id=str(user_id),
+                        title="Instant Deposit Credited",
+                        message=f"Your {currency} wallet has been credited with {currency} {amount} via Flutterwave.",
+                        notification_type="CREDIT_ALERT",
+                        data={"amount": amount, "currency": currency, "provider": "flutterwave"}
+                    )
                 except Exception as e:
                     print(f"Error auto-crediting wallet via Flutterwave webhook: {e}")
 
@@ -79,6 +87,14 @@ async def handle_provider_webhook(
             if user_id:
                 try:
                     WalletEngine.fund_wallet(user_id, currency, amount)
+                    from app.notifications.service import NotificationService
+                    NotificationService.dispatch(
+                        user_id=str(user_id),
+                        title="Instant Deposit Credited",
+                        message=f"Your {currency} wallet has been credited with {currency} {amount} via Paystack.",
+                        notification_type="CREDIT_ALERT",
+                        data={"amount": amount, "currency": currency, "provider": "paystack"}
+                    )
                 except Exception as e:
                     print(f"Error auto-crediting wallet via Paystack webhook: {e}")
 

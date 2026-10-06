@@ -16,7 +16,8 @@ from app.api.v1 import (
     beneficiaries,
     ai,
     admin,
-    webhooks
+    webhooks,
+    notifications
 )
 
 app = FastAPI(
@@ -49,6 +50,7 @@ app.include_router(beneficiaries.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
