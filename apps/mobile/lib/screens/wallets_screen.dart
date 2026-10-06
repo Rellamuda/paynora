@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 import 'exchange_screen.dart';
@@ -275,10 +276,14 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
-                  // In live app, launch URL
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Opening $gateway checkout: $checkoutUrl')),
-                  );
+                  final uri = Uri.parse(checkoutUrl);
+                  try {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not open browser: $e')),
+                    );
+                  }
                 },
               ),
             ),

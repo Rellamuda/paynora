@@ -104,36 +104,44 @@ export async function initializeDeposit(payload: {
   currency: string;
   amount: string;
   gateway?: string;
-}, token: string) {
+}, token?: string | null) {
   const url = `${getApiBaseUrl()}/wallets/deposit/initialize`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
+    headers,
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Payment gateway initialization failed');
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'Payment gateway initialization failed');
+  }
+  return data;
 }
 
 export async function verifyDeposit(payload: {
   reference: string;
   gateway: string;
   currency: string;
-}, token: string) {
+}, token?: string | null) {
   const url = `${getApiBaseUrl()}/wallets/deposit/verify`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
+    headers,
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Verification failed');
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'Verification failed');
+  }
+  return data;
 }
 
 export async function convertWallet(
