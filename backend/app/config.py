@@ -35,5 +35,6 @@ class Settings(BaseSettings):
     PAYSTACK_PUBLIC_KEY: str = os.getenv("PAYSTACK_PUBLIC_KEY", "")
     FLW_SECRET_KEY: str = os.getenv("FLW_SECRET_KEY", "")
     FLW_PUBLIC_KEY: str = os.getenv("FLW_PUBLIC_KEY", "")
+    FLW_ENCRYPTION_KEY: str = os.getenv("FLW_ENCRYPTION_KEY", "")
 
 settings = Settings()
