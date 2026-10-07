@@ -66,7 +66,8 @@ class AIFinancialAssistantEngine:
     def process_prompt(cls, user_id: str, prompt: str) -> Dict[str, Any]:
         prompt_clean = prompt.strip()
         wallets = WalletEngine.get_user_wallets(user_id)
-        user_context = f"User Wallets: {', '.join([f'{w['currency']} {w['available_balance']}' for w in wallets])}"
+        wallet_list = [f"{w.get('currency', 'USD')} {w.get('available_balance', '0.00')}" for w in wallets]
+        user_context = "User Wallets: " + ", ".join(wallet_list)
 
         # 1. Check for specific Transfer Intent ("Send 100 USD to John" or "Send ₦500,000 to Mike in London")
         send_match = re.search(r"send\s+(?:₦|\$|£|€)?\s*([\d,]+)\s*([A-Za-z]{3})?\s+to\s+([A-Za-z\s]+)", prompt_clean, re.IGNORECASE)
@@ -103,7 +104,7 @@ class AIFinancialAssistantEngine:
 
         # 2. Check for Balance Inquiries
         if "balance" in prompt_clean.lower() or "how much" in prompt_clean.lower():
-            balance_summary = " & ".join([f"{w['currency']} {w['available_balance']}" for w in wallets])
+            balance_summary = " & ".join([f"{w.get('currency', 'USD')} {w.get('available_balance', '0.00')}" for w in wallets])
             gemini_reply = cls.call_gemini(
                 f"The user is asking about their double currency balances ({balance_summary}). Summarize their active holdings.",
                 user_context
