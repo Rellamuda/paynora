@@ -50,17 +50,17 @@ export default function AIPage() {
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0D253F', margin: '0 0 6px 0' }}>✨ PayNora AI Financial Assistant</h1>
-        <p style={{ color: '#64748B', fontSize: '15px', margin: 0 }}>Natural language financial operations, corridor analytics, and intent-driven payments.</p>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0D253F', margin: '0 0 6px 0' }}>✨ Nora AI Financial Assistant (Powered by Gemini)</h1>
+        <p style={{ color: '#64748B', fontSize: '15px', margin: 0 }}>Google Gemini-powered intelligent money movement, corridor analysis, and Double Currency Wallet operations.</p>
       </div>
 
       {/* Suggested Prompts */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {[
-          "Send ₦1,000,000 to John in London",
-          "What is the current NGN to GBP rate?",
-          "Check my active wallet balances",
-          "What countries are supported for instant transfers?"
+          "Check my Double Currency Wallet balances",
+          "What is the current NGN to USD exchange rate?",
+          "Send $200 to John Doe in London",
+          "How does PayNora's Double Currency model work?"
         ].map((s, i) => (
           <button
             key={i}

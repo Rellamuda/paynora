@@ -21,6 +21,10 @@ class ApiService {
     return await _storage.read(key: 'jwt_token');
   }
 
+  Future<void> logout() async {
+    await _storage.delete(key: 'jwt_token');
+  }
+
   Future<Map<String, String>> _authHeaders() async {
     final token = await getAuthToken();
     return token != null ? {'Authorization': 'Bearer $token'} : {};

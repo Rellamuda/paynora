@@ -71,6 +71,9 @@ export default function LandingPage() {
             <span>{isDark ? 'Dark Theme' : 'Light Theme'}</span>
           </button>
 
+          <a href="/login" style={{ padding: '12px 20px', background: 'transparent', color: 'var(--text-main)', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
+            Sign In
+          </a>
           <a href="/onboarding" style={{ padding: '12px 24px', background: '#00C853', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Get Started →
           </a>
@@ -82,10 +85,10 @@ export default function LandingPage() {
 
       <main style={{ textAlign: 'center', margin: '40px 0' }}>
         <h1 style={{ fontSize: '52px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '20px', letterSpacing: '-1.5px', lineHeight: 1.15 }}>
-          Global Money Movement Engine & Multi-Currency Platform
+          Global Money Movement Engine & Double Currency Digital Wallets
         </h1>
         <p style={{ fontSize: '20px', color: 'var(--text-muted)', maxWidth: '820px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-          Instant, deterministic cross-border transfers and multi-currency wallets backed by double-entry accounting, real-time FX rate locking, and conversational AI financial intelligence.
+          Instant, deterministic cross-border transfers and Double Currency Digital Wallets (Your Country Local Currency + USD) backed by double-entry accounting, real-time FX rate locking, and conversational Nora AI intelligence.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '60px', flexWrap: 'wrap' }}>

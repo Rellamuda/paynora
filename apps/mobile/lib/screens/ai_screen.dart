@@ -15,16 +15,16 @@ class _AIScreenState extends State<AIScreen> {
   final List<Map<String, String>> _messages = [
     {
       'role': 'assistant',
-      'text': 'Hello! I am Nora, your AI cross-border financial assistant. I can help you monitor live FX volatility, recommend optimal sending windows across our 11 active launch countries, look up transfer clearing states, and assist with KYC verification tiers. How can I help you today?'
+      'text': 'Hello! I am Nora, your Gemini-powered AI financial assistant for PayNora. I can help you monitor live FX volatility, manage your Double Currency Digital Wallets (Local Currency + USD), recommend optimal transfer windows across our active corridors, and track live payouts. How can I help you today?'
     }
   ];
   bool _thinking = false;
 
   final List<String> _suggestedPrompts = [
-    'Best time to send GBP to NGN?',
+    'How do my Double Currency Wallets work?',
+    'Best time to swap NGN to USD?',
     'What are my Tier 3 transfer limits?',
-    'Check clearing status of my recent transfer',
-    'Compare FX rates for USD to EUR',
+    'Check clearing status of my payout',
   ];
 
   Future<void> _sendMessage(String text) async {
@@ -73,7 +73,7 @@ class _AIScreenState extends State<AIScreen> {
           children: [
             const Icon(Icons.auto_awesome, color: PayNoraColors.brandSecondary, size: 20),
             const SizedBox(width: 8),
-            const Text('PayNora AI Assistant', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
+            const Text('Nora AI (Gemini)', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
           ],
         ),
         backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,

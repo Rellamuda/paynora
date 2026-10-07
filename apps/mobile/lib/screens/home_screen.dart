@@ -46,9 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ? wallets
             : [
                 {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
-                {'currency': 'GBP', 'available_balance': '4250.00', 'symbol': '£'},
                 {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
-                {'currency': 'EUR', 'available_balance': '3100.00', 'symbol': '€'},
               ];
         _transfers = transfers;
         _loading = false;
@@ -57,9 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _wallets = [
           {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
-          {'currency': 'GBP', 'available_balance': '4250.00', 'symbol': '£'},
           {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
-          {'currency': 'EUR', 'available_balance': '3100.00', 'symbol': '€'},
         ];
         _loading = false;
       });
@@ -251,8 +247,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'TOTAL MULTI-CURRENCY BALANCE',
-                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                              'TOTAL DOUBLE-CURRENCY BALANCE',
+                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                             ),
                             IconButton(
                               constraints: const BoxConstraints(),
@@ -281,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
-                                '≈ \$16,150.00 USD • £12,920.00 GBP',
+                                '≈ \$16,150.00 USD (Local Currency + USD Dual Wallets)',
                                 style: TextStyle(color: PayNoraColors.brandSecondary, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             ),

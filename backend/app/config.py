@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     PAYSTACK_PUBLIC_KEY: str = os.getenv("PAYSTACK_PUBLIC_KEY", "")
     FLW_SECRET_KEY: str = os.getenv("FLW_SECRET_KEY", "")
     FLW_PUBLIC_KEY: str = os.getenv("FLW_PUBLIC_KEY", "")
-    FLW_ENCRYPTION_KEY: str = os.getenv("FLW_ENCRYPTION_KEY", "")
     FLW_WEBHOOK_HASH: str = os.getenv("FLW_WEBHOOK_HASH", "N7xKp9Qv2Lm8Rt4Yz6Hs1Wc5Jf3Bn0Dx8K")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
 settings = Settings()

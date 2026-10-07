@@ -19,10 +19,6 @@ const SUPPORTED_CURRENCIES = [
 const DEFAULT_WALLETS = [
   { currency: 'NGN', available_balance: '12,500,000.00', status: 'ACTIVE' },
   { currency: 'USD', available_balance: '5,800.00', status: 'ACTIVE' },
-  { currency: 'GBP', available_balance: '4,250.00', status: 'ACTIVE' },
-  { currency: 'EUR', available_balance: '3,100.00', status: 'ACTIVE' },
-  { currency: 'CAD', available_balance: '1,500.00', status: 'ACTIVE' },
-  { currency: 'AED', available_balance: '6,200.00', status: 'ACTIVE' },
 ];
 
 const ROUTING_TABLE: Record<string, { recommended: 'PAYSTACK' | 'FLUTTERWAVE'; supported: ('PAYSTACK' | 'FLUTTERWAVE')[]; min: number; max: number; reason: string }> = {
@@ -184,8 +180,8 @@ export default function WalletsPage() {
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>Multi-Currency Digital Wallets</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '15px', margin: 0 }}>Hold, receive, convert, and manage balances across global fiat currencies.</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>Double Currency Digital Wallets</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '15px', margin: 0 }}>Hold, receive, and instantly swap between your Local Currency and USD (Global Reserve).</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -199,12 +195,6 @@ export default function WalletsPage() {
             style={{ padding: '12px 20px', background: 'var(--bg-card-subtle)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
           >
             🔄 Convert Between Wallets
-          </button>
-          <button
-            onClick={() => setShowActivateModal(true)}
-            style={{ padding: '12px 20px', background: 'var(--brand-navy)', color: '#FFF', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
-          >
-            + Activate New Currency
           </button>
         </div>
       </div>

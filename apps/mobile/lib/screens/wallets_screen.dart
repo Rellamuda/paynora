@@ -46,11 +46,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
             ? res
             : [
                 {'currency': 'NGN', 'available_balance': '12500000.00'},
-                {'currency': 'GBP', 'available_balance': '4250.00'},
                 {'currency': 'USD', 'available_balance': '5800.00'},
-                {'currency': 'EUR', 'available_balance': '3100.00'},
-                {'currency': 'CAD', 'available_balance': '1500.00'},
-                {'currency': 'AED', 'available_balance': '6200.00'},
               ];
         _loading = false;
       });
@@ -58,11 +54,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
       setState(() {
         _wallets = [
           {'currency': 'NGN', 'available_balance': '12500000.00'},
-          {'currency': 'GBP', 'available_balance': '4250.00'},
           {'currency': 'USD', 'available_balance': '5800.00'},
-          {'currency': 'EUR', 'available_balance': '3100.00'},
-          {'currency': 'CAD', 'available_balance': '1500.00'},
-          {'currency': 'AED', 'available_balance': '6200.00'},
         ];
         _loading = false;
       });
@@ -464,14 +456,14 @@ class _WalletsScreenState extends State<WalletsScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Multi-Currency Wallets', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
+        title: const Text('Double Currency Wallets', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
         backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-            tooltip: 'Activate Currency',
-            onPressed: _showActivateWalletDialog,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh Balances',
+            onPressed: _loadWallets,
           ),
         ],
       ),
@@ -503,9 +495,9 @@ class _WalletsScreenState extends State<WalletsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Tier 3 Multi-Currency Clearance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text('Double Currency Digital Wallets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             SizedBox(height: 2),
-                            Text('Deterministic double-entry ledger • Zero negative balance drift', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                            Text('Authoritative Local Currency + USD • Zero negative balance drift', style: TextStyle(color: Colors.grey, fontSize: 11)),
                           ],
                         ),
                       ),

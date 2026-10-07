@@ -5,6 +5,8 @@ import 'screens/send_screen.dart';
 import 'screens/wallets_screen.dart';
 import 'screens/ai_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/login_screen.dart';
+import 'services/api_service.dart';
 import 'theme/design_tokens.dart';
 
 void main() {
@@ -25,10 +27,49 @@ class PayNoraApp extends StatelessWidget {
           theme: PayNoraThemes.lightTheme,
           darkTheme: PayNoraThemes.darkTheme,
           themeMode: themeMode,
-          home: const MainNavigationShell(),
+          home: const AuthGate(),
         );
       },
     );
+  }
+}
+
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  final ApiService _api = ApiService();
+  bool _checking = true;
+  bool _loggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final token = await _api.getAuthToken();
+    setState(() {
+      _loggedIn = token != null && token.isNotEmpty;
+      _checking = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: PayNoraColors.brandSecondary),
+        ),
+      );
+    }
+    return _loggedIn ? const MainNavigationShell() : const LoginScreen();
   }
 }
 

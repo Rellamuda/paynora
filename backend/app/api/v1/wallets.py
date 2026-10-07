@@ -4,7 +4,7 @@ from typing import List
 from app.api.v1.auth import get_current_user
 from app.wallets.models import WalletEngine
 
-router = APIRouter(prefix="/wallets", tags=["Multi-Currency Wallets"])
+router = APIRouter(prefix="/wallets", tags=["Double Currency Wallets"])
 
 class ActivateWalletPayload(BaseModel):
     currency: str
@@ -21,7 +21,7 @@ class ConvertWalletPayload(BaseModel):
 
 @router.get("")
 def list_wallets(current_user: dict = Depends(get_current_user)):
-    """Retrieve all multi-currency digital wallets for authenticated customer."""
+    """Retrieve double-currency digital wallets (Local Currency + USD) for authenticated customer."""
     user_id = current_user["user_id"]
     wallets = WalletEngine.get_user_wallets(user_id)
     return {

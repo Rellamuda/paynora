@@ -120,11 +120,11 @@ export default function DashboardOverviewPage() {
       {/* Overview Metric Banner */}
       <div style={{ background: '#0D253F', borderRadius: '20px', padding: '36px 40px', color: '#FFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px', boxShadow: '0 8px 30px rgba(13,37,63,0.12)' }}>
         <div>
-          <div style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, letterSpacing: '0.5px' }}>NET CONSOLIDATED MULTI-CURRENCY BALANCE</div>
+          <div style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, letterSpacing: '0.5px' }}>CONSOLIDATED DOUBLE-CURRENCY BALANCE</div>
           <div style={{ fontSize: '42px', fontWeight: 800, margin: '8px 0', letterSpacing: '-1px' }}>
-            ₦2,450,000.00 <span style={{ fontSize: '18px', color: '#00C853', fontWeight: 600 }}>(+4 Currencies Active)</span>
+            ₦2,450,000.00 <span style={{ fontSize: '18px', color: '#00C853', fontWeight: 600 }}>(Double-Currency: Local + USD)</span>
           </div>
-          <div style={{ fontSize: '13px', color: '#CBD5E1' }}>Real-time settlement • Double-entry immutable accounting engine</div>
+          <div style={{ fontSize: '13px', color: '#CBD5E1' }}>Real-time settlement • Double Currency Digital Wallets Architecture</div>
         </div>
 
         <div style={{ display: 'flex', gap: '14px' }}>
@@ -143,12 +143,12 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Multi-Currency Balances Row */}
+      {/* Double Currency Balances Row */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0D253F', margin: 0 }}>Active Currency Wallets</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0D253F', margin: 0 }}>Double Currency Digital Wallets</h2>
           <a href="/dashboard/wallets" style={{ fontSize: '13px', color: '#00C853', fontWeight: 700, textDecoration: 'none' }}>
-            Manage All Wallets & Conversion →
+            Manage Double Wallets & Conversion →
           </a>
         </div>
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -309,6 +311,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   activeColor: PayNoraColors.brandSecondary,
                   value: _biometricsEnabled,
                   onChanged: (val) => setState(() => _biometricsEnabled = val),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Log Out Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? PayNoraColors.darkCard : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Account Session', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 6),
+                const Text('Signed in as customer@paynora.com', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Log Out of PayNora', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Log Out'),
+                        content: const Text('Are you sure you want to log out of your PayNora account?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ApiService().logout();
+                      if (context.mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
             ),

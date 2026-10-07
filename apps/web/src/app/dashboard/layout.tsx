@@ -8,7 +8,7 @@ import { useTheme } from '../../lib/theme-context';
 const NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard', icon: '📊' },
   { label: 'Send Money', href: '/dashboard/send', icon: '💸' },
-  { label: 'Wallets & Balances', href: '/dashboard/wallets', icon: '👛' },
+  { label: 'Double Currency Wallets', href: '/dashboard/wallets', icon: '👛' },
   { label: 'Currency Exchange', href: '/dashboard/exchange', icon: '🔄' },
   { label: 'Recipients', href: '/dashboard/recipients', icon: '👥' },
   { label: 'Transactions', href: '/dashboard/transactions', icon: '📜' },
@@ -208,6 +208,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               ✨ Nora AI
             </a>
+            <button
+              onClick={handleLogout}
+              style={{ padding: '9px 16px', background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title="Sign out of PayNora"
+            >
+              🚪 Sign Out
+            </button>
           </div>
         </header>
 
