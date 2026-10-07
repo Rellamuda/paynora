@@ -43,21 +43,30 @@ class AIFinancialAssistantEngine:
         }
 
         try:
-            # Send API key via both query parameter and header for maximum compatibility
-            url = f"{cls.GEMINI_API_URL}?key={api_key}"
+            import time
+            model = getattr(settings, "GEMINI_MODEL", "") or "gemini-3.8-flash"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
             headers = {
                 "Content-Type": "application/json",
                 "x-goog-api-key": api_key
             }
-            with httpx.Client(timeout=12.0) as client:
-                resp = client.post(url, json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and len(candidates) > 0:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and len(parts) > 0:
-                            return parts[0].get("text", "").strip()
+            with httpx.Client(timeout=25.0) as client:
+                for attempt in range(3):
+                    resp = client.post(url, json=payload, headers=headers)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            text = "".join(p.get("text", "") for p in parts).strip()
+                            if text:
+                                return text
+                        return None
+                    if resp.status_code in (429, 500, 503) and attempt < 2:
+                        time.sleep(1.5 * (attempt + 1))
+                        continue
+                    print(f"[Nora AI] Gemini API error {resp.status_code}: {resp.text[:300]}")
+                    return None
         except Exception as e:
             print(f"[Nora AI] Gemini API call exception: {e}")
         return None
