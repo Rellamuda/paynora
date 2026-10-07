@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: PayNoraColors.brandPrimary,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxStyle(color: PayNoraColors.brandPrimary.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                        BoxShadow(color: PayNoraColors.brandPrimary.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
                       ],
                     ),
                     padding: const EdgeInsets.all(12),
