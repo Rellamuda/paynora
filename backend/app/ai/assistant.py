@@ -42,33 +42,31 @@ class AIFinancialAssistantEngine:
             }
         }
 
-        try:
-            import time
-            model = getattr(settings, "GEMINI_MODEL", "") or "gemini-3.8-flash"
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-            headers = {
-                "Content-Type": "application/json",
-                "x-goog-api-key": api_key
-            }
-            with httpx.Client(timeout=25.0) as client:
-                for attempt in range(3):
+        primary = getattr(settings, "GEMINI_MODEL", "") or "gemini-3.8-flash"
+        models = [primary] + [m for m in ("gemini-3.7-flash", "gemini-flash-latest", "gemini-3.5-flash-lite") if m != primary]
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
+        }
+        with httpx.Client(timeout=httpx.Timeout(15.0, connect=5.0)) as client:
+            for model in models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                try:
                     resp = client.post(url, json=payload, headers=headers)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        candidates = data.get("candidates", [])
-                        if candidates:
-                            parts = candidates[0].get("content", {}).get("parts", [])
-                            text = "".join(p.get("text", "") for p in parts).strip()
-                            if text:
-                                return text
-                        return None
-                    if resp.status_code in (429, 500, 503) and attempt < 2:
-                        time.sleep(1.5 * (attempt + 1))
-                        continue
-                    print(f"[Nora AI] Gemini API error {resp.status_code}: {resp.text[:300]}")
-                    return None
-        except Exception as e:
-            print(f"[Nora AI] Gemini API call exception: {e}")
+                except Exception as e:
+                    print(f"[Nora AI] {model} exception: {e}")
+                    continue
+                if resp.status_code == 200:
+                    candidates = resp.json().get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        text = "".join(p.get("text", "") for p in parts).strip()
+                        if text:
+                            return text
+                    continue
+                print(f"[Nora AI] {model} error {resp.status_code}: {resp.text[:200]}")
+                if resp.status_code in (400, 401, 403):
+                    return None  # bad key/request; other models won't help
         return None
 
     @classmethod
