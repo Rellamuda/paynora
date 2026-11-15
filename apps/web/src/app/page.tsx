@@ -95,7 +95,7 @@ export default function LandingPage() {
           <a href="/login" style={{ padding: '16px 36px', background: '#00C853', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Create Account & Verify ID →
           </a>
-          <a href="http://13.48.25.254/PayNora.apk" download="PayNora.apk" style={{ padding: '16px 32px', background: '#00A3FF', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,163,255,0.3)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <a href="https://github.com/Rellamuda/paynora/releases/download/latest/PayNora.apk" download="PayNora.apk" style={{ padding: '16px 32px', background: '#00A3FF', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,163,255,0.3)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             📲 Download Android APK
           </a>
           <a href="/dashboard" style={{ padding: '16px 32px', background: isDark ? '#1C2B4E' : '#F1F5F9', color: 'var(--text-main)', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
