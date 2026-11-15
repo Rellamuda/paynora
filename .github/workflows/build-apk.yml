@@ -49,3 +49,16 @@ jobs:
           name: PayNora-v1.0.0-release.apk
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
+
+      - name: Prepare Named APK
+        run: cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+
+      - name: Release Latest APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: PayNora Mobile Latest Release
+          body: "Official PayNora Mobile Release APK with Double Currency Digital Wallets and full Dual-Mode Auth (Sign In + Create Account)."
+          files: apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
