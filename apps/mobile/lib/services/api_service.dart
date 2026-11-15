@@ -57,6 +57,14 @@ class ApiService {
     return res.data;
   }
 
+  Future<Map<String, dynamic>> verifyOTP(String email, String otpCode) async {
+    final res = await _dio.post('/auth/verify-otp', data: {
+      'email': email,
+      'otp_code': otpCode,
+    });
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     final res = await _dio.post('/auth/login', data: {
       'email': email,

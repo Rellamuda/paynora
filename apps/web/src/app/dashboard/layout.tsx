@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const token = localStorage.getItem('paynora_token');
     if (!token) {
-      router.push('/onboarding');
+      router.push('/login');
       return;
     }
 

@@ -72,9 +72,9 @@ export default function LandingPage() {
           </button>
 
           <a href="/login" style={{ padding: '12px 20px', background: 'transparent', color: 'var(--text-main)', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
-            Sign In
+            Sign In / Register
           </a>
-          <a href="/onboarding" style={{ padding: '12px 24px', background: '#00C853', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
+          <a href="/login" style={{ padding: '12px 24px', background: '#00C853', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Get Started →
           </a>
           <a href="/dashboard" style={{ padding: '12px 24px', background: isDark ? '#1C2B4E' : '#0D253F', color: '#FFF', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', border: '1px solid var(--border-color)' }}>
@@ -92,7 +92,7 @@ export default function LandingPage() {
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '60px', flexWrap: 'wrap' }}>
-          <a href="/onboarding" style={{ padding: '16px 36px', background: '#00C853', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
+          <a href="/login" style={{ padding: '16px 36px', background: '#00C853', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,200,83,0.3)' }}>
             Create Account & Verify ID →
           </a>
           <a href="http://13.48.25.254/PayNora.apk" download="PayNora.apk" style={{ padding: '16px 32px', background: '#00A3FF', color: '#FFF', fontSize: '18px', fontWeight: '700', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 14px rgba(0,163,255,0.3)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
