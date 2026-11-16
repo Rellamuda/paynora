@@ -43,24 +43,28 @@ jobs:
 
       - name: Build Android Release APK
         working-directory: ./apps/mobile
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons --build-name=1.2.${{ github.run_number }} --build-number=${{ github.run_number }}
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PayNora-v1.0.0-release.apk
+          name: PayNora-v1.2.${{ github.run_number }}-release.apk
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
       - name: Prepare Named APK
-        run: cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+        run: |
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora-v1.2.${{ github.run_number }}.apk
 
       - name: Release Latest APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: PayNora Mobile Latest Release
-          body: "Official PayNora Mobile Release APK with Double Currency Digital Wallets and full Dual-Mode Auth (Sign In + Create Account)."
-          files: apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+          name: PayNora Mobile Latest Release (v1.2.${{ github.run_number }})
+          body: "Official PayNora Mobile Release APK (v1.2.${{ github.run_number }}) with App-to-App (P2P) + Bank + Mobile Money International Transfers, Default USD & GBP Foreign Wallets, Local Bank Transfers, and Airtime/Data/Electricity Bills."
+          files: |
+            apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
+            apps/mobile/build/app/outputs/flutter-apk/PayNora-v1.2.${{ github.run_number }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
