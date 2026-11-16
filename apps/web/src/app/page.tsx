@@ -89,7 +89,7 @@ export default function LandingPage() {
             justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(13, 37, 63, 0.4)'
           }}>
-            <img src="/logo.png" alt="PayNora" style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
+            <img src="logo.png" alt="PayNora" style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
