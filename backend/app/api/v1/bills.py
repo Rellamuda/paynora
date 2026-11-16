@@ -5,7 +5,7 @@ from decimal import Decimal
 import uuid
 import random
 from app.api.v1.auth import get_current_user
-from app.wallets.models import WalletEngine
+from app.wallets.models import WalletEngine, resolve_local_currency
 
 router = APIRouter(prefix="/bills", tags=["Bills & Utilities"])
 
@@ -153,7 +153,8 @@ def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict = Depen
 
     # Deduct from user's local currency wallet (NGN, GHS, KES etc.)
     wallets = WalletEngine.get_user_wallets(user_id)
-    local_wallet = next((w for w in wallets if w["currency"] != "USD"), None)
+    local_ccy = resolve_local_currency(user_id)
+    local_wallet = next((w for w in wallets if w["currency"] == local_ccy), None)
     if not local_wallet:
         raise HTTPException(status_code=400, detail="Local currency wallet not found.")
 
@@ -177,7 +178,8 @@ def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user: dict 
         raise HTTPException(status_code=400, detail="Data bundle amount must be greater than zero.")
 
     wallets = WalletEngine.get_user_wallets(user_id)
-    local_wallet = next((w for w in wallets if w["currency"] != "USD"), None)
+    local_ccy = resolve_local_currency(user_id)
+    local_wallet = next((w for w in wallets if w["currency"] == local_ccy), None)
     if not local_wallet:
         raise HTTPException(status_code=400, detail="Local currency wallet not found.")
 
@@ -202,7 +204,8 @@ def purchase_electricity(payload: ElectricityPaymentRequest, current_user: dict 
         raise HTTPException(status_code=400, detail="Minimum electricity payment is 500.00.")
 
     wallets = WalletEngine.get_user_wallets(user_id)
-    local_wallet = next((w for w in wallets if w["currency"] != "USD"), None)
+    local_ccy = resolve_local_currency(user_id)
+    local_wallet = next((w for w in wallets if w["currency"] == local_ccy), None)
     if not local_wallet:
         raise HTTPException(status_code=400, detail="Local currency wallet not found.")
 

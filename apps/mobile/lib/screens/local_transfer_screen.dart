@@ -60,8 +60,8 @@ class _LocalTransferScreenState extends State<LocalTransferScreen> {
     try {
       final wallets = await _api.getWallets();
       final local = wallets.firstWhere(
-        (w) => w['currency'] != null && w['currency'] != 'USD',
-        orElse: () => null,
+        (w) => w['is_local'] == true || (w['currency'] != null && w['currency'] != 'USD' && w['currency'] != 'GBP'),
+        orElse: () => wallets.isNotEmpty ? wallets.first : null,
       );
       if (local != null) {
         _currency = local['currency'];

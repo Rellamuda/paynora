@@ -5,47 +5,60 @@ import uuid
 # In-memory wallet store for local execution
 USER_WALLETS: Dict[str, List[Dict[str, Any]]] = {}
 
+# Default foreign currencies every user holds alongside their local currency
+DEFAULT_FOREIGN_CURRENCIES = ["USD", "GBP"]
+
+COUNTRY_LOCAL_CURRENCY = {
+    "NG": "NGN", "GH": "GHS", "KE": "KES", "ZA": "ZAR", "GB": "GBP", "US": "USD",
+    "CA": "CAD", "AE": "AED", "DE": "EUR", "FR": "EUR", "SA": "SAR", "CN": "CNY",
+}
+
+DEMO_SEED_BALANCES = {"NGN": "500000.00", "USD": "1250.00", "GBP": "800.00"}
+
+
+def resolve_local_currency(user_id: str) -> str:
+    """Derive the user's local currency from their registered country (defaults to NGN)."""
+    try:
+        from app.auth.store import USERS_DB
+        user = USERS_DB.get(user_id) or {}
+        return COUNTRY_LOCAL_CURRENCY.get((user.get("country_iso") or "NG").upper(), "NGN")
+    except Exception:
+        return "NGN"
+
+
 class WalletEngine:
     """
-    PayNora Double Currency Wallet Engine:
-    Each user in each country is provisioned strictly TWO wallets:
-    1. Country's Local Currency (e.g., NGN, GHS, KES, GBP, EUR, CAD, etc.)
-    2. USD (Global Reserve Currency)
+    PayNora Wallet Engine:
+    Each user is provisioned:
+    1. Their country's Local Currency wallet (e.g., NGN, GHS, KES)
+    2. Default foreign currency wallets: USD and GBP
+    (If the local currency is itself USD or GBP, it is not duplicated.)
     """
 
     @staticmethod
-    def initialize_default_wallets(user_id: str, primary_currency: str = "NGN") -> List[Dict[str, Any]]:
-        local_curr = (primary_currency or "NGN").upper()
-        second_curr = "EUR" if local_curr == "USD" else "USD"
-        allowed = {local_curr, second_curr}
+    def initialize_default_wallets(user_id: str, primary_currency: str = None) -> List[Dict[str, Any]]:
+        local_curr = (primary_currency or resolve_local_currency(user_id)).upper()
+        currencies = [local_curr] + [c for c in DEFAULT_FOREIGN_CURRENCIES if c != local_curr]
+        allowed = set(currencies)
 
         if user_id not in USER_WALLETS:
-            wallets = [
+            USER_WALLETS[user_id] = [
                 {
                     "wallet_id": f"wlt_{uuid.uuid4().hex[:10]}",
                     "user_id": user_id,
-                    "currency": local_curr,
-                    "available_balance": "500000.00" if local_curr == "NGN" else "2500.00",
+                    "currency": curr,
+                    "available_balance": DEMO_SEED_BALANCES.get(curr, "2500.00"),
                     "pending_balance": "0.00",
                     "status": "ACTIVE",
-                    "created_at": "2026-10-04T11:40:00Z"
-                },
-                {
-                    "wallet_id": f"wlt_{uuid.uuid4().hex[:10]}",
-                    "user_id": user_id,
-                    "currency": second_curr,
-                    "available_balance": "1250.00",
-                    "pending_balance": "0.00",
-                    "status": "ACTIVE",
+                    "is_local": curr == local_curr,
                     "created_at": "2026-10-04T11:40:00Z"
                 }
+                for curr in currencies
             ]
-            USER_WALLETS[user_id] = wallets
         else:
-            # Enforce strictly the Double Currency model: prune all other currency wallets
             USER_WALLETS[user_id] = [w for w in USER_WALLETS[user_id] if w["currency"] in allowed]
             existing = {w["currency"] for w in USER_WALLETS[user_id]}
-            for curr in (local_curr, second_curr):
+            for curr in currencies:
                 if curr not in existing:
                     USER_WALLETS[user_id].append({
                         "wallet_id": f"wlt_{uuid.uuid4().hex[:10]}",
@@ -59,7 +72,7 @@ class WalletEngine:
         return USER_WALLETS[user_id]
 
     @staticmethod
-    def get_user_wallets(user_id: str, primary_currency: str = "NGN") -> List[Dict[str, Any]]:
+    def get_user_wallets(user_id: str, primary_currency: str = None) -> List[Dict[str, Any]]:
         return WalletEngine.initialize_default_wallets(user_id, primary_currency)
 
     @staticmethod

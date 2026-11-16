@@ -47,6 +47,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
             : [
                 {'currency': 'NGN', 'available_balance': '12500000.00'},
                 {'currency': 'USD', 'available_balance': '5800.00'},
+                {'currency': 'GBP', 'available_balance': '3200.00'},
               ];
         _loading = false;
       });
@@ -55,6 +56,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
         _wallets = [
           {'currency': 'NGN', 'available_balance': '12500000.00'},
           {'currency': 'USD', 'available_balance': '5800.00'},
+          {'currency': 'GBP', 'available_balance': '3200.00'},
         ];
         _loading = false;
       });

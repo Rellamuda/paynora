@@ -24,13 +24,14 @@ async def test_wallet_activation_and_ledger_integrity():
         token = login_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # 2. List Default Wallets (NGN and GBP)
+        # 2. List Default Wallets (Local NGN + Default Foreign USD & GBP)
         wallets_res = await client.get("/api/v1/wallets", headers=headers)
         assert wallets_res.status_code == 200
         wallets_data = wallets_res.json()
-        assert wallets_data["count"] == 2
+        assert wallets_data["count"] == 3
         currencies = [w["currency"] for w in wallets_data["wallets"]]
         assert "NGN" in currencies
+        assert "USD" in currencies
         assert "GBP" in currencies
 
         # 3. Activate USD Wallet
@@ -52,3 +53,29 @@ async def test_wallet_activation_and_ledger_integrity():
         assert len(entries) == 2
         # Validate zero-discrepancy balance condition
         assert DoubleEntryLedgerEngine.validate_transaction(entries) is True
+
+        # 5. Verify App-to-App (P2P) lookup, quote, and instant transfer
+        lookup_res = await client.get("/api/v1/p2p/lookup?q=@chidi", headers=headers)
+        assert lookup_res.status_code == 200
+        lookup_data = lookup_res.json()
+        assert lookup_data["found"] is True
+        assert lookup_data["user_id"] == "usr_demo_chidi"
+
+        p2p_res = await client.post(
+            "/api/v1/p2p/transfer",
+            json={
+                "recipient_user_id": "usr_demo_chidi",
+                "source_currency": "USD",
+                "amount": "100.00",
+                "receive_mode": "ORIGINAL",
+                "note": "Test P2P USD transfer"
+            },
+            headers={**headers, "Idempotency-Key": "test_p2p_usd_100"}
+        )
+        assert p2p_res.status_code == 201
+        p2p_data = p2p_res.json()
+        assert p2p_data["type"] == "APP_TO_APP"
+        assert p2p_data["state"] == "COMPLETED"
+        assert p2p_data["destination_currency"] == "USD"
+        assert p2p_data["destination_amount"] == "100.00"
+        assert p2p_data["fee"] == "0.00"

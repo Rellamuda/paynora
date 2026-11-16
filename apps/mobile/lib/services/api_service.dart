@@ -352,4 +352,59 @@ class ApiService {
     );
     return res.data;
   }
+
+  // App-to-App (P2P) Transfers
+  Future<Map<String, dynamic>> lookupP2PUser(String query) async {
+    final headers = await _authHeaders();
+    final res = await _dio.get(
+      '/p2p/lookup',
+      queryParameters: {'q': query},
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getP2PQuote({
+    required String recipientUserId,
+    required String sourceCurrency,
+    required String amount,
+    String receiveMode = 'LOCAL',
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.get(
+      '/p2p/quote',
+      queryParameters: {
+        'recipient_user_id': recipientUserId,
+        'source_currency': sourceCurrency,
+        'amount': amount,
+        'receive_mode': receiveMode,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> createP2PTransfer({
+    required String recipientUserId,
+    required String sourceCurrency,
+    required String amount,
+    required String receiveMode,
+    String? note,
+    required String idempotencyKey,
+  }) async {
+    final headers = await _authHeaders();
+    headers['Idempotency-Key'] = idempotencyKey;
+    final res = await _dio.post(
+      '/p2p/transfer',
+      data: {
+        'recipient_user_id': recipientUserId,
+        'source_currency': sourceCurrency,
+        'amount': amount,
+        'receive_mode': receiveMode,
+        'note': note,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
 }
