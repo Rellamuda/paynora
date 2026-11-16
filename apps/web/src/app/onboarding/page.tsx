@@ -1,5 +1,12 @@
 'use client';
 
-import MobileRedirectAuthPage from '../login/page';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default MobileRedirectAuthPage;
+export default function RedirectToHome() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/');
+  }, [router]);
+  return null;
+}

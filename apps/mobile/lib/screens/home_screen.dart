@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 import 'send_screen.dart';
+import 'local_transfer_screen.dart';
+import 'bills_screen.dart';
 import 'wallets_screen.dart';
 import 'exchange_screen.dart';
 import 'recipients_screen.dart';
@@ -295,9 +297,39 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _actionButton(
                         icon: Icons.send_rounded,
-                        label: 'Send',
+                        label: 'Send Abroad',
                         color: PayNoraColors.brandSecondary,
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SendScreen())),
+                      ),
+                      _actionButton(
+                        icon: Icons.account_balance_rounded,
+                        label: 'To Bank',
+                        color: const Color(0xFF0EA5E9),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LocalTransferScreen())),
+                      ),
+                      _actionButton(
+                        icon: Icons.phone_in_talk_rounded,
+                        label: 'Airtime',
+                        color: const Color(0xFFEC4899),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BillsScreen(initialTab: 0))),
+                      ),
+                      _actionButton(
+                        icon: Icons.wifi_rounded,
+                        label: 'Data',
+                        color: const Color(0xFF14B8A6),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BillsScreen(initialTab: 1))),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _actionButton(
+                        icon: Icons.bolt_rounded,
+                        label: 'Electricity',
+                        color: const Color(0xFFEAB308),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BillsScreen(initialTab: 2))),
                       ),
                       _actionButton(
                         icon: Icons.add_circle_outline,

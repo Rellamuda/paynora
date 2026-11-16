@@ -236,4 +236,120 @@ class ApiService {
     );
     return res.data;
   }
+
+  // Local Banking & Account Resolution
+  Future<List<dynamic>> getSupportedBanks([String country = 'NG']) async {
+    final res = await _dio.get('/transfers/banks', queryParameters: {'country': country});
+    return (res.data['banks'] as List<dynamic>?) ?? [];
+  }
+
+  Future<Map<String, dynamic>> resolveBankAccount({
+    required String accountNumber,
+    required String bankCode,
+    String currency = 'NGN',
+  }) async {
+    final res = await _dio.post('/transfers/resolve-account', data: {
+      'account_number': accountNumber,
+      'account_bank': bankCode,
+      'currency': currency,
+    });
+    return res.data;
+  }
+
+  // Bills & Utilities (Airtime, Data, Electricity)
+  Future<List<dynamic>> getBillOperators([String country = 'NG']) async {
+    final res = await _dio.get('/bills/operators', queryParameters: {'country': country});
+    return (res.data['operators'] as List<dynamic>?) ?? [];
+  }
+
+  Future<List<dynamic>> getDataPlans(String operatorCode) async {
+    final res = await _dio.get('/bills/data-plans', queryParameters: {'operator_code': operatorCode});
+    return (res.data['plans'] as List<dynamic>?) ?? [];
+  }
+
+  Future<List<dynamic>> getElectricityProviders([String country = 'NG']) async {
+    final res = await _dio.get('/bills/electricity-providers', queryParameters: {'country': country});
+    return (res.data['providers'] as List<dynamic>?) ?? [];
+  }
+
+  Future<Map<String, dynamic>> validateMeter({
+    required String discoCode,
+    required String meterNumber,
+    String meterType = 'PREPAID',
+    String countryIso = 'NG',
+  }) async {
+    final res = await _dio.post('/bills/validate-meter', data: {
+      'disco_code': discoCode,
+      'meter_number': meterNumber,
+      'meter_type': meterType,
+      'country_iso': countryIso,
+    });
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> purchaseAirtime({
+    required String phone,
+    required String operatorCode,
+    required String amount,
+    String countryIso = 'NG',
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/bills/airtime',
+      data: {
+        'phone_number': phone,
+        'operator_code': operatorCode,
+        'amount': amount,
+        'country_iso': countryIso,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> purchaseData({
+    required String phone,
+    required String operatorCode,
+    required String planId,
+    required String amount,
+    String countryIso = 'NG',
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/bills/data',
+      data: {
+        'phone_number': phone,
+        'operator_code': operatorCode,
+        'plan_id': planId,
+        'amount': amount,
+        'country_iso': countryIso,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> purchaseElectricity({
+    required String discoCode,
+    required String meterNumber,
+    required String meterType,
+    required String amount,
+    String? customerName,
+    String countryIso = 'NG',
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/bills/electricity',
+      data: {
+        'disco_code': discoCode,
+        'meter_number': meterNumber,
+        'meter_type': meterType,
+        'amount': amount,
+        'customer_name': customerName,
+        'country_iso': countryIso,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
 }
