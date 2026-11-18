@@ -236,7 +236,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       final res = await _api.convertAirtimeToCash(
         phone: _a2cPhone.text,
         operatorCode: _a2cOperator,
-        airtime_amount: amt.toStringAsFixed(2),
+        airtimeAmount: amt.toStringAsFixed(2),
         sharePin: _a2cSharePin.text.trim().isEmpty ? null : _a2cSharePin.text.trim(),
         countryIso: _country,
       );
