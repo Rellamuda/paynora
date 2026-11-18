@@ -131,6 +131,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ['Network', _airOperator!],
         ['Phone', _airPhone.text],
         ['Amount', '$_symbol${res['amount']}'],
+        if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
         ['Reference', '${res['transaction_id']}'],
       ]);
     } catch (e) {
@@ -158,6 +159,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ['Plan', '${_selectedPlan!['name']}'],
         ['Phone', _dataPhone.text],
         ['Amount', '$_symbol${res['amount']}'],
+        if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
         ['Reference', '${res['transaction_id']}'],
       ]);
     } catch (e) {
@@ -207,6 +209,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           ['Customer', '${res['customer_name']}'],
           ['Amount', '$_symbol${res['amount']}'],
           if (_meterType == 'PREPAID') ['Units', '${res['units']}'],
+          if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
           ['Reference', '${res['transaction_id']}'],
         ],
         token: _meterType == 'PREPAID' ? '${res['token']}' : null,

@@ -179,9 +179,55 @@ class BankingEngine:
         narration: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Disburse funds directly to recipient bank account using Flutterwave Transfer API.
+        Disburse funds directly to recipient bank account using Paystack (for NGN/GHS/ZAR/KES)
+        or Flutterwave Transfer API, with automatic failover.
         """
         ref = f"payout_{transfer_id}"
+        curr = currency.upper()
+
+        # 1. Try Paystack Transfer API for NGN / GHS / ZAR / KES when configured
+        if settings.PAYSTACK_SECRET_KEY and curr in ("NGN", "GHS", "ZAR", "KES") and account_bank.isdigit():
+            try:
+                headers = {
+                    "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+                    "Content-Type": "application/json"
+                }
+                rec_type = "nuban" if curr == "NGN" else ("mobile_money" if curr == "KES" else "basa")
+                rec_body = {
+                    "type": rec_type,
+                    "name": recipient_name,
+                    "account_number": account_number,
+                    "bank_code": account_bank,
+                    "currency": curr,
+                }
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    rec_resp = await client.post(f"{cls.PAYSTACK_BASE_URL}/transferrecipient", json=rec_body, headers=headers)
+                    rec_data = rec_resp.json()
+                    if rec_resp.status_code in (200, 201) and rec_data.get("status"):
+                        recipient_code = rec_data["data"]["recipient_code"]
+                        tx_body = {
+                            "source": "balance",
+                            "amount": int(float(amount) * 100),
+                            "recipient": recipient_code,
+                            "reason": narration or f"PayNora Transfer {transfer_id}",
+                            "reference": ref,
+                        }
+                        tx_resp = await client.post(f"{cls.PAYSTACK_BASE_URL}/transfer", json=tx_body, headers=headers)
+                        tx_data = tx_resp.json()
+                        if tx_resp.status_code in (200, 201) and tx_data.get("status"):
+                            t_info = tx_data.get("data", {})
+                            return {
+                                "status": "SUCCESS",
+                                "gateway": "PAYSTACK",
+                                "disbursal_status": t_info.get("status", "PENDING").upper(),
+                                "provider_transfer_id": t_info.get("transfer_code") or t_info.get("id"),
+                                "reference": ref,
+                                "raw": tx_data,
+                            }
+            except Exception as e:
+                print(f"[BankingEngine] Paystack transfer attempt failed, failing over to Flutterwave: {e}")
+
+        # 2. Try Flutterwave Transfer API
         if settings.FLW_SECRET_KEY:
             try:
                 headers = {
@@ -193,10 +239,10 @@ class BankingEngine:
                     "account_number": account_number,
                     "amount": float(amount),
                     "narration": narration or f"PayNora Transfer {transfer_id}",
-                    "currency": currency.upper(),
+                    "currency": curr,
                     "reference": ref,
                     "callback_url": "http://13.48.25.254:8000/api/v1/webhooks/flutterwave",
-                    "debit_currency": currency.upper()
+                    "debit_currency": curr
                 }
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     resp = await client.post(f"{cls.FLUTTERWAVE_BASE_URL}/transfers", json=body, headers=headers)
@@ -205,6 +251,7 @@ class BankingEngine:
                         transfer_data = data.get("data", {})
                         return {
                             "status": "SUCCESS",
+                            "gateway": "FLUTTERWAVE",
                             "disbursal_status": transfer_data.get("status", "PENDING"),
                             "provider_transfer_id": transfer_data.get("id"),
                             "reference": ref,
@@ -225,9 +272,10 @@ class BankingEngine:
                     "code": "NETWORK_EXCEPTION"
                 }
 
-        # Mock success for simulation / development
+        # 3. Mock success for simulation / development when no live keys are set
         return {
             "status": "SUCCESS",
+            "gateway": "SANDBOX",
             "disbursal_status": "COMPLETED",
             "provider_transfer_id": f"flw_sim_{transfer_id}",
             "reference": ref,

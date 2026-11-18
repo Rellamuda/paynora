@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from decimal import Decimal
 import uuid
-from typing import List
+from typing import List, Dict, Any, Optional
 from app.transfers.state_machine import TransferState
 from app.events.kafka import event_publisher
 from app.notifications.service import NotificationService
 from app.receipts.generator import ReceiptGenerator
+from app.api.v1.auth import get_current_user
+from app.wallets.models import WalletEngine
+from app.fx.engine import FXEngine
 
 router = APIRouter(prefix="/transfers", tags=["Transfers"])
 
@@ -20,6 +23,9 @@ class CreateTransferRequest(BaseModel):
     recipient_currency_mode: str = "CHOICE"
     destination_currency: str | None = None
     gateway: str | None = None
+    payout_method: str | None = None
+    narration: str | None = None
+    account_details: Dict[str, Any] | None = None
 
 class SelectRecipientCurrencyRequest(BaseModel):
     selected_currency: str
@@ -128,12 +134,13 @@ def get_transfer_receipt_html(transfer_id: str):
     raise HTTPException(status_code=404, detail="Transfer not found")
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_transfer(
+async def create_transfer(
     payload: CreateTransferRequest,
-    idempotency_key: str = Header(..., alias="Idempotency-Key")
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Idempotent transfer intent creation endpoint.
+    Idempotent transfer creation & bank/mobile-money payout execution endpoint.
     """
     if idempotency_key in IDEMPOTENCY_CACHE:
         return IDEMPOTENCY_CACHE[idempotency_key]
@@ -145,25 +152,83 @@ def create_transfer(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid transfer amount: {str(e)}")
 
+    user_id = current_user.get("user_id", "usr_demo_customer")
+    src_curr = payload.source_currency.upper()
+    payout_currency = (payload.destination_currency or src_curr).upper()
+
+    # Check & debit sender's wallet when executing a real payout (account_details provided)
+    # or whenever the wallet holds sufficient balance
+    wallets = WalletEngine.get_user_wallets(user_id)
+    source_wallet = next((w for w in wallets if w["currency"] == src_curr), None)
+    debited = False
+    if payload.account_details:
+        if not source_wallet:
+            raise HTTPException(status_code=400, detail=f"You do not have an active {src_curr} wallet.")
+        current_bal = Decimal(source_wallet["available_balance"])
+        if current_bal < amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient {src_curr} wallet balance.")
+        source_wallet["available_balance"] = f"{(current_bal - amount):.2f}"
+        debited = True
+    elif source_wallet and Decimal(source_wallet["available_balance"]) >= amount:
+        source_wallet["available_balance"] = f"{(Decimal(source_wallet['available_balance']) - amount):.2f}"
+        debited = True
+
+    # Calculate destination payout amount
+    if src_curr == payout_currency:
+        destination_amount = f"{amount:.2f}"
+        estimated_fee = "0.00"
+    else:
+        fx_quote = FXEngine.generate_quote(src_curr, payout_currency, str(amount))
+        destination_amount = fx_quote["destination_amount"]
+        estimated_fee = fx_quote["fee"]
+
     transfer_id = f"trf_{uuid.uuid4().hex[:12]}"
     from app.providers.payment import PaymentGatewayRouter
-    payout_currency = (payload.destination_currency or payload.source_currency).upper()
     payout_route = PaymentGatewayRouter.get_route(payout_currency)
     payout_gateway = PaymentGatewayRouter.select_gateway(payout_currency, payload.gateway)
+
+    transfer_state = TransferState.PROCESSING
+    disbursal_info = None
+
+    # If recipient bank/mobile-money account details are provided, disburse immediately
+    if payload.account_details and payload.account_details.get("account_number"):
+        from app.providers.banking import BankingEngine
+        acc_num = str(payload.account_details.get("account_number"))
+        bank_code = str(payload.account_details.get("bank_code") or payload.account_details.get("institution") or "044")
+        disbursal_info = await BankingEngine.disburse_payout(
+            transfer_id=transfer_id,
+            account_bank=bank_code,
+            account_number=acc_num,
+            amount=destination_amount,
+            currency=payout_currency,
+            recipient_name=payload.recipient_name,
+            narration=payload.narration
+        )
+        if disbursal_info.get("status") == "ERROR":
+            # Roll back wallet debit on gateway failure
+            if debited and source_wallet:
+                source_wallet["available_balance"] = f"{(Decimal(source_wallet['available_balance']) + amount):.2f}"
+            raise HTTPException(status_code=400, detail=disbursal_info.get("message", "Bank payout failed."))
+        transfer_state = TransferState.COMPLETED
+
     response_data = {
         "transfer_id": transfer_id,
         "idempotency_key": idempotency_key,
-        "source_currency": payload.source_currency.upper(),
+        "source_currency": src_curr,
         "source_amount": str(amount),
         "destination_currency": payout_currency,
+        "destination_amount": destination_amount,
         "recipient_name": payload.recipient_name,
         "source_country": payload.source_country.upper(),
         "destination_country": payload.destination_country.upper(),
         "recipient_currency_mode": payload.recipient_currency_mode,
-        "payout_gateway": payout_gateway,
+        "payout_method": payload.payout_method or "LOCAL_BANK",
+        "payout_gateway": disbursal_info.get("gateway", payout_gateway) if disbursal_info else payout_gateway,
         "payout_gateway_reason": payout_route["reason"],
-        "state": TransferState.PROCESSING,
-        "estimated_fee": "500.00",
+        "state": transfer_state,
+        "estimated_fee": estimated_fee,
+        "wallet_balance_after": source_wallet["available_balance"] if source_wallet else None,
+        "disbursal": disbursal_info,
         "created_at": "2026-10-06T22:00:00Z"
     }
 
@@ -173,11 +238,11 @@ def create_transfer(
 
     # Dispatch notification alert
     NotificationService.dispatch(
-        user_id="usr_demo",
-        title="Transfer Initiated",
-        message=f"Transfer of {payload.source_currency.upper()} {payload.source_amount} to {payload.recipient_name} is processing.",
+        user_id=user_id,
+        title="Transfer Dispatched",
+        message=f"Transfer of {src_curr} {payload.source_amount} to {payload.recipient_name} is {transfer_state}.",
         notification_type="DEBIT_ALERT",
-        data={"transfer_id": transfer_id, "amount": str(amount), "currency": payload.source_currency.upper()}
+        data={"transfer_id": transfer_id, "amount": str(amount), "currency": src_curr}
     )
 
     return response_data

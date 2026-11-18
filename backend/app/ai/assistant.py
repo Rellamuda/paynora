@@ -77,11 +77,13 @@ class AIFinancialAssistantEngine:
         user_context = "User Wallets: " + ", ".join(wallet_list)
 
         # 1. Check for specific Transfer Intent ("Send 100 USD to John" or "Send ₦500,000 to Mike in London")
-        send_match = re.search(r"send\s+(?:₦|\$|£|€)?\s*([\d,]+)\s*([A-Za-z]{3})?\s+to\s+([A-Za-z\s]+)", prompt_clean, re.IGNORECASE)
+        send_match = re.search(r"send\s+(₦|\$|£|€)?\s*([\d,]+)\s*([A-Za-z]{3})?\s+to\s+([A-Za-z\s]+)", prompt_clean, re.IGNORECASE)
         if send_match:
-            raw_amount = send_match.group(1).replace(",", "")
-            raw_currency = (send_match.group(2) or "USD").upper()
-            recipient_name = send_match.group(3).strip()
+            symbol = send_match.group(1)
+            raw_amount = send_match.group(2).replace(",", "")
+            symbol_map = {"₦": "NGN", "$": "USD", "£": "GBP", "€": "EUR"}
+            raw_currency = (send_match.group(3) or symbol_map.get(symbol, "USD")).upper()
+            recipient_name = send_match.group(4).strip()
 
             dest_currency = "GBP" if "london" in prompt_clean.lower() or "uk" in prompt_clean.lower() else ("NGN" if raw_currency == "USD" else "USD")
             fx_quote = FXEngine.generate_quote(raw_currency, dest_currency, raw_amount)

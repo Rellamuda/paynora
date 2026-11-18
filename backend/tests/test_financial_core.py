@@ -79,3 +79,50 @@ async def test_wallet_activation_and_ledger_integrity():
         assert p2p_data["destination_currency"] == "USD"
         assert p2p_data["destination_amount"] == "100.00"
         assert p2p_data["fee"] == "0.00"
+
+        # 6. Verify Bill Payments (Airtime, Data, Electricity) deduct from Local Currency Wallet (NGN)
+        air_res = await client.post(
+            "/api/v1/bills/airtime",
+            json={"phone_number": "08031234567", "operator_code": "MTN", "amount": "2000.00", "country_iso": "NG"},
+            headers=headers
+        )
+        assert air_res.status_code == 200
+        assert air_res.json()["wallet_balance_after"] == "498000.00"
+
+        pwr_res = await client.post(
+            "/api/v1/bills/electricity",
+            json={
+                "disco_code": "IKEDC",
+                "meter_number": "45012345678",
+                "meter_type": "PREPAID",
+                "amount": "5000.00",
+                "customer_name": "RELLA MUDA",
+                "country_iso": "NG"
+            },
+            headers=headers
+        )
+        assert pwr_res.status_code == 200
+        assert pwr_res.json()["wallet_balance_after"] == "493000.00"
+        assert len(pwr_res.json()["token"]) == 24  # XXXX-XXXX-XXXX-XXXX-XXXX
+
+        # 7. Verify Bank Transfer with account_details deducts wallet balance & disburses payout
+        bank_res = await client.post(
+            "/api/v1/transfers",
+            json={
+                "source_currency": "NGN",
+                "destination_currency": "NGN",
+                "source_amount": "13000.00",
+                "recipient_name": "CHUKWUEMEKA OBI",
+                "source_country": "NG",
+                "destination_country": "NG",
+                "recipient_currency_mode": "LOCAL_CURRENCY",
+                "payout_method": "LOCAL_BANK",
+                "account_details": {"account_number": "0123456789", "bank_code": "044", "institution": "Access Bank"}
+            },
+            headers={**headers, "Idempotency-Key": "test_local_bank_13000"}
+        )
+        assert bank_res.status_code == 201
+        bank_data = bank_res.json()
+        assert bank_data["state"] == "COMPLETED"
+        assert bank_data["wallet_balance_after"] == "480000.00"
+        assert bank_data["disbursal"]["status"] == "SUCCESS"
