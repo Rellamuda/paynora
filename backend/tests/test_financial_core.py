@@ -126,3 +126,34 @@ async def test_wallet_activation_and_ledger_integrity():
         assert bank_data["state"] == "COMPLETED"
         assert bank_data["wallet_balance_after"] == "480000.00"
         assert bank_data["disbursal"]["status"] == "SUCCESS"
+
+        # 8. Verify One-Tap Airtime Reversal (100% refund back to Local Currency Wallet)
+        air_tx_id = air_res.json()["transaction_id"]
+        rev_res = await client.post(
+            "/api/v1/bills/airtime/reverse",
+            json={"transaction_id": air_tx_id},
+            headers=headers
+        )
+        assert rev_res.status_code == 200
+        assert rev_res.json()["status"] == "REVERSED"
+        assert rev_res.json()["refunded_amount"] == "2000.00"
+        assert rev_res.json()["wallet_balance_after"] == "482000.00"
+
+        # 9. Verify Airtime-to-Cash Converter (90% cash payout / 10% conversion fee)
+        a2c_res = await client.post(
+            "/api/v1/bills/airtime-to-cash",
+            json={
+                "phone_number": "08021234567",
+                "operator_code": "AIRTEL",
+                "airtime_amount": "10000.00",
+                "country_iso": "NG"
+            },
+            headers=headers
+        )
+        assert a2c_res.status_code == 200
+        a2c_data = a2c_res.json()
+        assert a2c_data["status"] == "CONVERTED"
+        assert a2c_data["payout_rate"] == "90%"
+        assert a2c_data["conversion_fee"] == "1000.00"
+        assert a2c_data["cash_credited"] == "9000.00"
+        assert a2c_data["wallet_balance_after"] == "491000.00"

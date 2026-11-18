@@ -407,4 +407,46 @@ class ApiService {
     );
     return res.data;
   }
+
+  // Airtime Reversal & Airtime-to-Cash (90% Payout)
+  Future<List<dynamic>> getRecentAirtimePurchases() async {
+    final headers = await _authHeaders();
+    final res = await _dio.get(
+      '/bills/airtime/recent',
+      options: Options(headers: headers),
+    );
+    return (res.data['transactions'] as List<dynamic>?) ?? [];
+  }
+
+  Future<Map<String, dynamic>> reverseAirtime(String transactionId) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/bills/airtime/reverse',
+      data: {'transaction_id': transactionId},
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> convertAirtimeToCash({
+    required String phone,
+    required String operatorCode,
+    required String airtimeAmount,
+    String? sharePin,
+    String countryIso = 'NG',
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/bills/airtime-to-cash',
+      data: {
+        'phone_number': phone,
+        'operator_code': operatorCode,
+        'airtime_amount': airtimeAmount,
+        'share_pin': sharePin,
+        'country_iso': countryIso,
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
 }

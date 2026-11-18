@@ -109,6 +109,33 @@ class ElectricityPaymentRequest(BaseModel):
     country_iso: str = "NG"
 
 
+class AirtimeReversalRequest(BaseModel):
+    transaction_id: str
+
+
+class AirtimeToCashRequest(BaseModel):
+    phone_number: str
+    operator_code: str = "AIRTEL"
+    airtime_amount: str
+    share_pin: Optional[str] = None
+    country_iso: str = "NG"
+
+
+AIRTIME_TRANSACTIONS: Dict[str, Dict[str, Any]] = {}
+AIRTIME_TO_CASH_PAYOUT_RATE = Decimal("0.90")  # 90% cash payout (10% conversion fee)
+
+
+def _credit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
+    wallets = WalletEngine.get_user_wallets(user_id)
+    local_ccy = resolve_local_currency(user_id)
+    local_wallet = next((w for w in wallets if w["currency"] == local_ccy), None)
+    if not local_wallet:
+        raise HTTPException(status_code=400, detail="Local currency wallet not found.")
+    current_bal = Decimal(local_wallet["available_balance"])
+    local_wallet["available_balance"] = f"{(current_bal + amount):.2f}"
+    return local_wallet
+
+
 def _debit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
     wallets = WalletEngine.get_user_wallets(user_id)
     local_ccy = resolve_local_currency(user_id)
@@ -216,9 +243,10 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
         local_wallet["available_balance"] = f"{(Decimal(local_wallet['available_balance']) + amount):.2f}"
         raise HTTPException(status_code=400, detail=flw_res["_error"])
 
-    return {
+    record = {
         "status": "SUCCESSFUL",
         "transaction_id": tx_id,
+        "user_id": user_id,
         "provider_reference": (flw_res or {}).get("flw_ref", tx_id),
         "phone_number": payload.phone_number,
         "operator": payload.operator_code,
@@ -226,8 +254,12 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
         "live_provider": bool(flw_res),
+        "reversible": True,
+        "reversed": False,
         "message": f"Airtime recharge of {local_wallet['currency']} {amount:.2f} to {payload.phone_number} delivered instantly."
     }
+    AIRTIME_TRANSACTIONS[tx_id] = record
+    return record
 
 
 @router.post("/data")
@@ -301,4 +333,75 @@ async def purchase_electricity(payload: ElectricityPaymentRequest, current_user:
         "units": f"{kwh_units} kWh",
         "live_provider": bool(flw_res),
         "message": f"Electricity recharge of {local_wallet['currency']} {amount:.2f} generated. Token: {token_formatted}"
+    }
+
+
+@router.get("/airtime/recent")
+def get_recent_airtime_purchases(current_user: dict = Depends(get_current_user)):
+    """List the user's recent airtime purchases so they can reverse any purchase in one tap."""
+    user_id = current_user["user_id"]
+    items = [tx for tx in reversed(list(AIRTIME_TRANSACTIONS.values())) if tx.get("user_id") == user_id]
+    return {"count": len(items), "transactions": items[:20]}
+
+
+@router.post("/airtime/reverse")
+def reverse_airtime_purchase(payload: AirtimeReversalRequest, current_user: dict = Depends(get_current_user)):
+    """One-tap reversal of an already purchased airtime transaction back to 100% wallet cash."""
+    user_id = current_user["user_id"]
+    tx = AIRTIME_TRANSACTIONS.get(payload.transaction_id)
+    if not tx or tx.get("user_id") != user_id:
+        raise HTTPException(status_code=404, detail="Airtime transaction not found.")
+    if tx.get("reversed"):
+        raise HTTPException(status_code=400, detail="This airtime purchase has already been reversed to cash.")
+
+    refund_amount = Decimal(tx["amount"])
+    local_wallet = _credit_local_wallet(user_id, refund_amount)
+    tx["reversed"] = True
+    tx["reversible"] = False
+    tx["status"] = "REVERSED"
+
+    return {
+        "status": "REVERSED",
+        "transaction_id": tx["transaction_id"],
+        "operator": tx["operator"],
+        "phone_number": tx["phone_number"],
+        "refunded_amount": f"{refund_amount:.2f}",
+        "currency": local_wallet["currency"],
+        "wallet_balance_after": local_wallet["available_balance"],
+        "message": f"Reversed {local_wallet['currency']} {refund_amount:.2f} ({tx['operator']} airtime) back to your wallet cash."
+    }
+
+
+@router.post("/airtime-to-cash")
+def convert_airtime_to_cash(payload: AirtimeToCashRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Convert Airtel / MTN / Glo / 9mobile airtime back to cash in the user's Local Currency Wallet
+    at a 90% cash payout rate (10% conversion fee).
+    """
+    user_id = current_user["user_id"]
+    try:
+        airtime_amount = Decimal(payload.airtime_amount)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid airtime amount.")
+    if airtime_amount < Decimal("100.00"):
+        raise HTTPException(status_code=400, detail="Minimum airtime-to-cash conversion is 100.00.")
+
+    cash_payout = (airtime_amount * AIRTIME_TO_CASH_PAYOUT_RATE).quantize(Decimal("0.01"))
+    conversion_fee = (airtime_amount - cash_payout).quantize(Decimal("0.01"))
+
+    local_wallet = _credit_local_wallet(user_id, cash_payout)
+    conv_id = f"a2c_{uuid.uuid4().hex[:10]}"
+
+    return {
+        "status": "CONVERTED",
+        "conversion_id": conv_id,
+        "operator": payload.operator_code.upper(),
+        "phone_number": payload.phone_number,
+        "airtime_amount": f"{airtime_amount:.2f}",
+        "payout_rate": "90%",
+        "conversion_fee": f"{conversion_fee:.2f}",
+        "cash_credited": f"{cash_payout:.2f}",
+        "currency": local_wallet["currency"],
+        "wallet_balance_after": local_wallet["available_balance"],
+        "message": f"Converted {local_wallet['currency']} {airtime_amount:.2f} {payload.operator_code.upper()} airtime into {local_wallet['currency']} {cash_payout:.2f} wallet cash (90% payout)."
     }
