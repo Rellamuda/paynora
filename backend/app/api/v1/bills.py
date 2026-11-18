@@ -123,8 +123,8 @@ def _debit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
 
 
 async def _call_flw_bills(country: str, customer: str, amount: Decimal, bill_type: str, reference: str) -> Optional[Dict[str, Any]]:
-    """Execute live bill payment via Flutterwave Bills API when FLW_SECRET_KEY is configured."""
-    if not settings.FLW_SECRET_KEY:
+    """Execute live bill payment via Flutterwave Bills API when a live FLW_SECRET_KEY is configured."""
+    if not settings.FLW_SECRET_KEY or "TEST" in settings.FLW_SECRET_KEY.upper():
         return None
     headers = {
         "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",

@@ -185,8 +185,11 @@ class BankingEngine:
         ref = f"payout_{transfer_id}"
         curr = currency.upper()
 
-        # 1. Try Paystack Transfer API for NGN / GHS / ZAR / KES when configured
-        if settings.PAYSTACK_SECRET_KEY and curr in ("NGN", "GHS", "ZAR", "KES") and account_bank.isdigit():
+        is_live_paystack = bool(settings.PAYSTACK_SECRET_KEY and not settings.PAYSTACK_SECRET_KEY.startswith("sk_test_"))
+        is_live_flw = bool(settings.FLW_SECRET_KEY and "TEST" not in settings.FLW_SECRET_KEY.upper())
+
+        # 1. Try Paystack Transfer API for NGN / GHS / ZAR / KES when live key is configured
+        if is_live_paystack and curr in ("NGN", "GHS", "ZAR", "KES") and account_bank.isdigit():
             try:
                 headers = {
                     "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
@@ -227,8 +230,8 @@ class BankingEngine:
             except Exception as e:
                 print(f"[BankingEngine] Paystack transfer attempt failed, failing over to Flutterwave: {e}")
 
-        # 2. Try Flutterwave Transfer API
-        if settings.FLW_SECRET_KEY:
+        # 2. Try Flutterwave Transfer API when live key is configured
+        if is_live_flw:
             try:
                 headers = {
                     "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",

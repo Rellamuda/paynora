@@ -1,7 +1,16 @@
 import os
-from pydantic_settings import BaseSettings
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
+_BACKEND_ENV = Path(__file__).resolve().parents[1] / ".env"
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=[str(_ROOT_ENV), str(_BACKEND_ENV), ".env"],
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
     APP_NAME: str = "PayNora Global Financial Core"
     ENV: str = "development"
     PORT: int = 8000
