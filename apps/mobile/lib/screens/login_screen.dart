@@ -21,8 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   late bool _isSignUp;
 
   // Controllers - Sign In
-  final _loginEmailCtrl = TextEditingController(text: 'customer@paynora.com');
-  final _loginPassCtrl = TextEditingController(text: 'PayNora#2026!');
+  final _loginEmailCtrl = TextEditingController();
+  final _loginPassCtrl = TextEditingController();
   bool _obscureLoginPass = true;
 
   // Controllers - Sign Up
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _api.login(email, password);
+      await _api.login(email.toLowerCase(), password);
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainNavigationShell()),
@@ -133,14 +133,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      // In case offline, development or sandbox test, allow demo bypass
-      await _api.setAuthToken('demo_mobile_jwt_token_2026');
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationShell()),
-          (route) => false,
-        );
-      }
+      String msg = 'Invalid email address or password. Tap "Create Account" above if you have not registered yet.';
+      try {
+        final d = (e as dynamic).response?.data?['detail'];
+        if (d != null) msg = '$d';
+      } catch (_) {}
+      setState(() => _errorMessage = msg);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -180,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final cleanPhone = phone.replaceAll(RegExp(r'^0+'), '');
       final fullPhone = '${_selectedCountry['dial']}$cleanPhone';
 
-      await _api.register({
+      final regRes = await _api.register({
         'first_name': fName,
         'last_name': lName,
         'email': email.toLowerCase(),
@@ -190,27 +188,78 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       // Auto login after registration
-      await _api.login(email.toLowerCase(), password);
+      final loginRes = await _api.login(email.toLowerCase(), password);
+      final accNo = loginRes['account_number'] ?? regRes['account_number'] ?? '';
+      final tag = loginRes['paynora_tag'] ?? regRes['paynora_tag'] ?? '';
+      final addr = loginRes['wallet_address'] ?? regRes['wallet_address'] ?? '';
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: PayNoraColors.success,
-            content: Text(
-              'Welcome $fName! Your ${_selectedCountry['curr']} + USD Double Wallets are ready.',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.verified_user, color: PayNoraColors.brandSecondary),
+                SizedBox(width: 8),
+                Expanded(child: Text('Account Provisioned!', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
+              ],
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Welcome $fName $lName! Your official PayNora identifiers have been assigned:'),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: PayNoraColors.brandSecondary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: PayNoraColors.brandSecondary.withOpacity(0.4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('10-Digit Account Number: $accNo', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                      const SizedBox(height: 6),
+                      Text('PayNora Tag / Code: $tag', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      Text('Global Wallet Address: $addr', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 6),
+                      Text('Wallets: ${_selectedCountry['curr']} (Local) + ${_selectedCountry['curr'] == 'USD' ? 'GBP' : 'USD'} (Foreign)',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: PayNoraColors.brandSecondary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: PayNoraColors.brandSecondary),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Enter My Account →', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         );
 
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainNavigationShell()),
           (route) => false,
         );
       }
     } catch (e) {
+      String msg = 'Registration failed. Please check your details.';
+      try {
+        final d = (e as dynamic).response?.data?['detail'];
+        if (d != null) msg = '$d';
+      } catch (_) {}
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _errorMessage = msg;
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -612,25 +661,6 @@ class _LoginScreenState extends State<LoginScreen> {
           child: _loading
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Text('Sign In to Account →', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        ),
-        const SizedBox(height: 14),
-
-        // Fast Demo Button
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: isDark ? Colors.white70 : PayNoraColors.brandPrimary,
-            side: BorderSide(color: isDark ? PayNoraColors.darkBorder : Colors.grey[300]!),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          onPressed: _loading
-              ? null
-              : () {
-                  _loginEmailCtrl.text = 'customer@paynora.com';
-                  _loginPassCtrl.text = 'PayNora#2026!';
-                  _handleLogin();
-                },
-          child: const Text('⚡ Quick Demo Sign-In', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         ),
       ],
     );

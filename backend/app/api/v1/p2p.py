@@ -51,17 +51,18 @@ P2P_IDEMPOTENCY: Dict[str, Dict[str, Any]] = {}
 # ---------------------------------------------------------------------------
 _DEMO_USERS = [
     {"user_id": "usr_demo_chidi", "first_name": "Chidi", "last_name": "Amadi", "email": "chidi@paynora.com",
-     "phone": "+2348031234567", "tag": "chidi", "country_iso": "NG"},
+     "phone": "+2348031234567", "tag": "chidi", "paynora_tag": "@chidi", "account_number": "9012345678",
+     "wallet_address": "PN-NG-9012345678", "country_iso": "NG"},
     {"user_id": "usr_demo_sarah", "first_name": "Sarah", "last_name": "Thompson", "email": "sarah@paynora.com",
-     "phone": "+447700900123", "tag": "sarah", "country_iso": "GB"},
+     "phone": "+447700900123", "tag": "sarah", "paynora_tag": "@sarah", "account_number": "9044009123",
+     "wallet_address": "PN-GB-9044009123", "country_iso": "GB"},
     {"user_id": "usr_demo_kwame", "first_name": "Kwame", "last_name": "Mensah", "email": "kwame@paynora.com",
-     "phone": "+233241234567", "tag": "kwame", "country_iso": "GH"},
+     "phone": "+233241234567", "tag": "kwame", "paynora_tag": "@kwame", "account_number": "9023324123",
+     "wallet_address": "PN-GH-9023324123", "country_iso": "GH"},
 ]
 
 
 def _seed_demo_directory() -> None:
-    if settings.ENV.lower() == "production":
-        return
     for u in _DEMO_USERS:
         if u["user_id"] not in USERS_DB:
             USERS_DB[u["user_id"]] = {
@@ -89,18 +90,29 @@ def _find_user(query: str) -> Optional[Dict[str, Any]]:
     q = (query or "").strip()
     if not q:
         return None
+    q_low = q.lower()
+    if q_low.startswith("pn-"):
+        return next((u for u in USERS_DB.values() if (u.get("wallet_address") or "").lower() == q_low), None)
     if q.startswith("@"):
         tag = q[1:].lower()
-        return next((u for u in USERS_DB.values() if (u.get("tag") or "").lower() == tag), None)
+        return next(
+            (u for u in USERS_DB.values() if (u.get("tag") or "").lower() == tag or (u.get("paynora_tag") or "").lower() == q_low),
+            None,
+        )
     if "@" in q:
-        email = q.lower()
-        return next((u for u in USERS_DB.values() if (u.get("email") or "").lower() == email), None)
+        return next((u for u in USERS_DB.values() if (u.get("email") or "").lower() == q_low), None)
     d = _digits(q)
-    if len(d) < 7:
-        return None
-    # Match on trailing 10 digits so 0803..., 234803..., +234803... all resolve.
-    tail = d[-10:]
-    return next((u for u in USERS_DB.values() if _digits(u.get("phone", "")).endswith(tail)), None)
+    if len(d) == 10:
+        by_acc = next((u for u in USERS_DB.values() if u.get("account_number") == d), None)
+        if by_acc:
+            return by_acc
+    if len(d) >= 7:
+        tail = d[-10:]
+        by_phone = next((u for u in USERS_DB.values() if _digits(u.get("phone", "")).endswith(tail)), None)
+        if by_phone:
+            return by_phone
+    # Also check bare tag name without @
+    return next((u for u in USERS_DB.values() if (u.get("tag") or "").lower() == q_low), None)
 
 
 def _mask_name(user: Dict[str, Any]) -> str:
@@ -178,7 +190,9 @@ def lookup_recipient(q: str = Query(..., min_length=3), current_user: dict = Dep
         "found": True,
         "user_id": user["user_id"],
         "display_name": _mask_name(user),
-        "tag": f"@{user['tag']}" if user.get("tag") else None,
+        "tag": user.get("paynora_tag") or (f"@{user['tag']}" if user.get("tag") else None),
+        "account_number": user.get("account_number"),
+        "wallet_address": user.get("wallet_address"),
         "country_iso": (user.get("country_iso") or "NG").upper(),
         "local_currency": resolve_local_currency(user["user_id"]),
         "verified": user.get("kyc_status") == "VERIFIED",

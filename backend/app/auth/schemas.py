@@ -22,6 +22,12 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    country_iso: Optional[str] = "NG"
+    account_number: Optional[str] = None
+    paynora_tag: Optional[str] = None
+    wallet_address: Optional[str] = None
     roles: List[str]
 
 class UserProfileResponse(BaseModel):
@@ -31,6 +37,9 @@ class UserProfileResponse(BaseModel):
     email: str
     phone: str
     country_iso: str
+    account_number: Optional[str] = None
+    paynora_tag: Optional[str] = None
+    wallet_address: Optional[str] = None
     is_email_verified: bool
     is_phone_verified: bool
     kyc_status: str

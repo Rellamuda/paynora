@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 import 'send_screen.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _api = ApiService();
+  Map<String, dynamic>? _profile;
   List<dynamic> _wallets = [];
   List<dynamic> _transfers = [];
   bool _loading = true;
@@ -41,14 +43,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadDashboard() async {
     setState(() => _loading = true);
     try {
+      final profile = await _api.getUserProfile().catchError((_) => <String, dynamic>{});
       final wallets = await _api.getWallets();
       final transfers = await _api.getTransfers();
       setState(() {
+        if (profile.isNotEmpty) _profile = profile;
         _wallets = wallets.isNotEmpty
             ? wallets.take(2).toList()
             : [
-                {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
-                {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
+                {'currency': 'NGN', 'available_balance': '500000.00', 'symbol': '₦'},
+                {'currency': 'USD', 'available_balance': '1250.00', 'symbol': '\$'},
               ];
         _transfers = transfers;
         _loading = false;
@@ -56,8 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       setState(() {
         _wallets = [
-          {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
-          {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
+          {'currency': 'NGN', 'available_balance': '500000.00', 'symbol': '₦'},
+          {'currency': 'USD', 'available_balance': '1250.00', 'symbol': '\$'},
         ];
         _loading = false;
       });
@@ -266,7 +270,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _hideBalance ? '••••••••••' : '₦ 24,850,240.00',
+                          _hideBalance
+                              ? '••••••••••'
+                              : (_wallets.isNotEmpty
+                                  ? '${_wallets.first['currency']} ${_wallets.first['available_balance']}'
+                                  : 'NGN 0.00'),
                           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
                         ),
                         const SizedBox(height: 6),
@@ -278,12 +286,67 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: PayNoraColors.brandSecondary.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Text(
-                                '≈ \$16,150.00 USD (Local Currency + USD Dual Wallets)',
-                                style: TextStyle(color: PayNoraColors.brandSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                              child: Text(
+                                _wallets.length > 1
+                                    ? 'Foreign Wallet: ${_wallets[1]['currency']} ${_hideBalance ? "••••" : _wallets[1]['available_balance']}'
+                                    : 'Double-Currency Digital Wallets',
+                                style: const TextStyle(color: PayNoraColors.brandSecondary, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  final acc = '${_profile?['account_number'] ?? '9012345678'}';
+                                  Clipboard.setData(ClipboardData(text: acc));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Account Number copied: $acc')),
+                                  );
+                                },
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.account_balance_wallet_outlined, color: Colors.white70, size: 14),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Acc No: ${_profile?['account_number'] ?? '9012345678'}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.copy, color: PayNoraColors.brandSecondary, size: 12),
+                                  ],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  final tag = '${_profile?['paynora_tag'] ?? '@paynora'}';
+                                  Clipboard.setData(ClipboardData(text: tag));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('PayNora Tag copied: $tag')),
+                                  );
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'Tag: ${_profile?['paynora_tag'] ?? '@customer'}',
+                                      style: const TextStyle(color: PayNoraColors.brandSecondary, fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.copy, color: PayNoraColors.brandSecondary, size: 12),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
