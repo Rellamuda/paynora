@@ -226,6 +226,41 @@ def _discos_for_country(country_iso: str) -> List[Dict[str, str]]:
     ]
 
 
+# Standard STS Prepaid & Postpaid Meter Prefixes (IIN) for Nigerian Discos
+NG_METER_PREFIX_MAP: Dict[str, str] = {
+    "45": "IKEDC", "04": "IKEDC", "10": "IKEDC",
+    "43": "EKEDC", "01": "EKEDC", "11": "EKEDC",
+    "47": "AEDC",  "07": "AEDC",  "13": "AEDC",
+    "62": "IBEDC", "14": "IBEDC", "15": "IBEDC",
+    "54": "EEDC",  "16": "EEDC",  "17": "EEDC",
+    "02": "PHED",  "18": "PHED",  "20": "PHED",
+    "30": "KEDCO", "21": "KEDCO", "22": "KEDCO",
+    "19": "BEDC",  "95": "BEDC",  "23": "BEDC",
+}
+
+
+def detect_electricity_provider(meter_number: str, country_iso: str = "NG") -> Dict[str, str]:
+    """Automatically detect the Electricity Distribution Company (Disco) from the meter number."""
+    digits = re.sub(r"\D", "", meter_number or "")
+    c = (country_iso or "NG").upper()
+    discos = _discos_for_country(c)
+
+    matched_code = None
+    if c == "NG" and len(digits) >= 2:
+        matched_code = NG_METER_PREFIX_MAP.get(digits[:2])
+
+    if not matched_code and len(digits) >= 2:
+        idx = int(digits[:2]) % len(discos)
+        matched_code = discos[idx]["code"]
+
+    disco = next((d for d in discos if d["code"] == matched_code), discos[0])
+    return {
+        "disco_code": disco["code"],
+        "disco_name": disco["name"],
+        "coverage": disco.get("coverage", f"{c} Power Grid"),
+    }
+
+
 # Request Schemas
 class AirtimePurchaseRequest(BaseModel):
     phone_number: str
@@ -243,14 +278,14 @@ class DataBundlePurchaseRequest(BaseModel):
 
 
 class ValidateMeterRequest(BaseModel):
-    disco_code: str
+    disco_code: Optional[str] = None
     meter_number: str
     meter_type: str = "PREPAID"
     country_iso: str = "NG"
 
 
 class ElectricityPaymentRequest(BaseModel):
-    disco_code: str
+    disco_code: Optional[str] = None
     meter_number: str
     meter_type: str = "PREPAID"
     amount: str
@@ -266,6 +301,7 @@ class AirtimeToCashRequest(BaseModel):
     phone_number: str
     operator_code: Optional[str] = None
     airtime_amount: str
+    category: str = "AIRTIME"  # AIRTIME, DATA, or ELECTRICITY
     share_pin: Optional[str] = None
     country_iso: str = "NG"
 
@@ -380,21 +416,26 @@ def get_electricity_providers(country: str = "NG"):
 
 @router.post("/validate-meter")
 def validate_electricity_meter(payload: ValidateMeterRequest):
-    """Validate customer meter number before recharge."""
+    """Automatically detect electricity provider from meter number and validate customer legal name."""
     meter = payload.meter_number.strip().replace(" ", "")
     if len(meter) < 6:
         raise HTTPException(status_code=400, detail="Meter number must be at least 6 digits.")
+
+    detected = detect_electricity_provider(meter, payload.country_iso)
+    disco_code = payload.disco_code or detected["disco_code"]
 
     mock_names = ["OLUWASEUN ADEKUNLE", "CHIDI OKONKWO", "EMMANUEL DANJUMA", "FATIMA BELLO", "GRACE AFOLABI"]
     chosen_name = mock_names[abs(hash(meter)) % len(mock_names)]
 
     return {
         "status": "VALID",
-        "disco": payload.disco_code,
+        "disco": disco_code,
+        "disco_name": detected["disco_name"],
+        "coverage": detected["coverage"],
         "meter_number": meter,
         "meter_type": payload.meter_type.upper(),
         "customer_name": chosen_name,
-        "address": f"Plot {abs(hash(meter)) % 80 + 1}, Verified Power Grid ({payload.country_iso.upper()})",
+        "address": f"Plot {abs(hash(meter)) % 80 + 1}, {detected['coverage']} ({payload.country_iso.upper()})",
         "minimum_amount": "5.00" if payload.country_iso.upper() != "NG" else "500.00"
     }
 
@@ -420,6 +461,7 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
 
     record = {
         "status": "SUCCESSFUL",
+        "category": "AIRTIME",
         "transaction_id": tx_id,
         "user_id": user_id,
         "provider_reference": (flw_res or {}).get("flw_ref", tx_id),
@@ -457,9 +499,11 @@ async def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user:
         local_wallet["available_balance"] = f"{(Decimal(local_wallet['available_balance']) + amount):.2f}"
         raise HTTPException(status_code=400, detail=flw_res["_error"])
 
-    return {
+    record = {
         "status": "SUCCESSFUL",
+        "category": "DATA",
         "transaction_id": tx_id,
+        "user_id": user_id,
         "provider_reference": (flw_res or {}).get("flw_ref", tx_id),
         "phone_number": payload.phone_number,
         "operator": op_code,
@@ -469,22 +513,29 @@ async def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user:
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
         "live_provider": bool(flw_res),
+        "reversible": True,
+        "reversed": False,
         "message": f"Data bundle ({op_code}) activated on {payload.phone_number} instantly."
     }
+    AIRTIME_TRANSACTIONS[tx_id] = record
+    return record
 
 
 @router.post("/electricity")
 async def purchase_electricity(payload: ElectricityPaymentRequest, current_user: dict = Depends(get_current_user)):
-    """Purchase electricity tokens (prepaid) or settle utility bills (postpaid) in any country."""
+    """Purchase electricity tokens (prepaid) or settle utility bills (postpaid) with auto disco detection."""
     user_id = current_user["user_id"]
     amount = Decimal(payload.amount)
     if amount <= Decimal("0"):
         raise HTTPException(status_code=400, detail="Electricity payment amount must be greater than zero.")
 
+    detected = detect_electricity_provider(payload.meter_number, payload.country_iso)
+    disco_code = (payload.disco_code or detected["disco_code"]).upper()
+
     local_wallet = _debit_local_wallet(user_id, amount)
     tx_id = f"pwr_{uuid.uuid4().hex[:10]}"
 
-    flw_res = await _call_flw_bills(payload.country_iso, payload.meter_number, amount, payload.disco_code, tx_id)
+    flw_res = await _call_flw_bills(payload.country_iso, payload.meter_number, amount, disco_code, tx_id)
     if flw_res and "_error" in flw_res:
         local_wallet["available_balance"] = f"{(Decimal(local_wallet['available_balance']) + amount):.2f}"
         raise HTTPException(status_code=400, detail=flw_res["_error"])
@@ -499,11 +550,17 @@ async def purchase_electricity(payload: ElectricityPaymentRequest, current_user:
     unit_rate = 68.0 if local_wallet["currency"] == "NGN" else 0.25
     kwh_units = max(1.0, round(float(amount) / unit_rate, 1))
 
-    return {
+    record = {
         "status": "SUCCESSFUL",
+        "category": "ELECTRICITY",
         "transaction_id": tx_id,
+        "user_id": user_id,
         "provider_reference": (flw_res or {}).get("flw_ref", tx_id),
-        "disco": payload.disco_code,
+        "disco": disco_code,
+        "disco_name": detected["disco_name"],
+        "operator": disco_code,
+        "operator_name": detected["disco_name"],
+        "phone_number": payload.meter_number,
         "meter_number": payload.meter_number,
         "meter_type": payload.meter_type.upper(),
         "customer_name": payload.customer_name or "PAYNORA SUBSCRIBER",
@@ -513,62 +570,75 @@ async def purchase_electricity(payload: ElectricityPaymentRequest, current_user:
         "token": token_formatted,
         "units": f"{kwh_units} kWh",
         "live_provider": bool(flw_res),
-        "message": f"Electricity recharge of {local_wallet['currency']} {amount:.2f} generated. Token: {token_formatted}"
+        "reversible": True,
+        "reversed": False,
+        "message": f"Electricity recharge of {local_wallet['currency']} {amount:.2f} ({detected['disco_name']}) generated. Token: {token_formatted}"
     }
+    AIRTIME_TRANSACTIONS[tx_id] = record
+    return record
 
 
 @router.get("/airtime/recent")
 def get_recent_airtime_purchases(current_user: dict = Depends(get_current_user)):
-    """List the user's recent airtime purchases so they can reverse any purchase in one tap."""
+    """List the user's recent Airtime, Data, and Electricity purchases for 1-tap reversal."""
     user_id = current_user["user_id"]
     items = [tx for tx in reversed(list(AIRTIME_TRANSACTIONS.values())) if tx.get("user_id") == user_id]
-    return {"count": len(items), "transactions": items[:20]}
+    return {"count": len(items), "transactions": items[:25]}
 
 
 @router.post("/airtime/reverse")
 def reverse_airtime_purchase(payload: AirtimeReversalRequest, current_user: dict = Depends(get_current_user)):
-    """One-tap reversal of an already purchased airtime transaction back to 100% wallet cash."""
+    """One-tap reversal of an already purchased Airtime, Data, or Electricity payment back to 100% wallet cash."""
     user_id = current_user["user_id"]
     tx = AIRTIME_TRANSACTIONS.get(payload.transaction_id)
     if not tx or tx.get("user_id") != user_id:
-        raise HTTPException(status_code=404, detail="Airtime transaction not found.")
+        raise HTTPException(status_code=404, detail="Bill transaction not found.")
     if tx.get("reversed"):
-        raise HTTPException(status_code=400, detail="This airtime purchase has already been reversed to cash.")
+        raise HTTPException(status_code=400, detail="This purchase has already been reversed to cash.")
 
     refund_amount = Decimal(tx["amount"])
     local_wallet = _credit_local_wallet(user_id, refund_amount)
     tx["reversed"] = True
     tx["reversible"] = False
     tx["status"] = "REVERSED"
+    cat = tx.get("category", "AIRTIME")
 
     return {
         "status": "REVERSED",
+        "category": cat,
         "transaction_id": tx["transaction_id"],
-        "operator": tx["operator"],
-        "phone_number": tx["phone_number"],
+        "operator": tx.get("operator", ""),
+        "phone_number": tx.get("phone_number", ""),
         "refunded_amount": f"{refund_amount:.2f}",
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
-        "message": f"Reversed {local_wallet['currency']} {refund_amount:.2f} ({tx['operator']} airtime) back to your wallet cash."
+        "message": f"Reversed {local_wallet['currency']} {refund_amount:.2f} ({tx.get('operator', '')} {cat.lower()}) back to your wallet cash."
     }
 
 
 @router.post("/airtime-to-cash")
 def convert_airtime_to_cash(payload: AirtimeToCashRequest, current_user: dict = Depends(get_current_user)):
     """
-    Convert Airtel / MTN / Glo / 9mobile (or any detected operator) airtime back to cash
-    in the user's Local Currency Wallet at a 90% cash payout rate (10% conversion fee).
+    Convert Airtime, Data, or Electricity value back to cash in the user's Local Currency Wallet
+    at a 90% cash payout rate (10% conversion fee).
     """
     user_id = current_user["user_id"]
     try:
         airtime_amount = Decimal(payload.airtime_amount)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid airtime amount.")
+        raise HTTPException(status_code=400, detail="Invalid amount.")
     if airtime_amount <= Decimal("0"):
-        raise HTTPException(status_code=400, detail="Airtime amount must be greater than zero.")
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
 
-    detected = detect_network_operator(payload.phone_number, payload.country_iso)
-    op_code = (payload.operator_code or detected["operator_code"]).upper()
+    cat = (payload.category or "AIRTIME").upper()
+    if cat == "ELECTRICITY":
+        det_disco = detect_electricity_provider(payload.phone_number, payload.country_iso)
+        op_code = (payload.operator_code or det_disco["disco_code"]).upper()
+        op_name = det_disco["disco_name"]
+    else:
+        detected = detect_network_operator(payload.phone_number, payload.country_iso)
+        op_code = (payload.operator_code or detected["operator_code"]).upper()
+        op_name = detected["operator_name"]
 
     cash_payout = (airtime_amount * AIRTIME_TO_CASH_PAYOUT_RATE).quantize(Decimal("0.01"))
     conversion_fee = (airtime_amount - cash_payout).quantize(Decimal("0.01"))
@@ -578,9 +648,10 @@ def convert_airtime_to_cash(payload: AirtimeToCashRequest, current_user: dict = 
 
     return {
         "status": "CONVERTED",
+        "category": cat,
         "conversion_id": conv_id,
         "operator": op_code,
-        "operator_name": detected["operator_name"],
+        "operator_name": op_name,
         "phone_number": payload.phone_number,
         "airtime_amount": f"{airtime_amount:.2f}",
         "payout_rate": "90%",
@@ -588,5 +659,5 @@ def convert_airtime_to_cash(payload: AirtimeToCashRequest, current_user: dict = 
         "cash_credited": f"{cash_payout:.2f}",
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
-        "message": f"Converted {local_wallet['currency']} {airtime_amount:.2f} {op_code} airtime into {local_wallet['currency']} {cash_payout:.2f} wallet cash (90% payout)."
+        "message": f"Converted {local_wallet['currency']} {airtime_amount:.2f} {op_code} {cat.lower()} into {local_wallet['currency']} {cash_payout:.2f} wallet cash (90% payout)."
     }

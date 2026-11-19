@@ -446,7 +446,25 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <a
+            href="privacy/"
+            style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="terms/"
+            style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
+          >
+            Terms &amp; Fees
+          </a>
+          <a
+            href="delete-account/"
+            style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
+          >
+            Delete Account
+          </a>
           <button
             onClick={() => setShowFreezeModal(true)}
             style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}

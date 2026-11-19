@@ -99,3 +99,47 @@ class UserStore:
                 user["is_phone_verified"] = True
             return True
         return False
+
+    @staticmethod
+    def delete_user(user_id: str) -> bool:
+        from app.wallets.models import USER_WALLETS
+        USER_WALLETS.pop(user_id, None)
+        removed = USERS_DB.pop(user_id, None)
+        if removed and removed.get("email"):
+            OTP_STORE.pop(removed["email"], None)
+        return removed is not None
+
+
+# Seed official Apple App Store & Google Play Store Reviewer Test Account
+def _seed_store_reviewer_account() -> None:
+    reviewer_email = "reviewer@paynora.com"
+    if any(u.get("email") == reviewer_email for u in USERS_DB.values()):
+        return
+    USERS_DB["usr_store_reviewer"] = {
+        "user_id": "usr_store_reviewer",
+        "first_name": "AppStore",
+        "last_name": "Reviewer",
+        "email": reviewer_email,
+        "phone": "+2348099999999",
+        "country_iso": "NG",
+        "account_number": "9088888888",
+        "tag": "reviewer888",
+        "paynora_tag": "@reviewer888",
+        "wallet_address": "PN-NG-9088888888",
+        "hashed_password": hash_password("PayNoraReview2026!"),
+        "is_email_verified": True,
+        "is_phone_verified": True,
+        "kyc_status": "VERIFIED",
+        "roles": ["CUSTOMER"],
+        "account_capabilities": [
+            "VIEW_ACCOUNT",
+            "SEND_MONEY",
+            "RECEIVE_MONEY",
+            "CONVERT_CURRENCY",
+            "PAY_BILLS",
+        ],
+        "created_at": "2026-10-04T11:35:00Z",
+    }
+
+
+_seed_store_reviewer_account()

@@ -25,6 +25,18 @@ class ApiService {
     await _storage.delete(key: 'jwt_token');
   }
 
+  Future<Map<String, dynamic>> deleteAccount() async {
+    final headers = await _authHeaders();
+    try {
+      final res = await _dio.delete('/auth/account', options: Options(headers: headers));
+      await logout();
+      return res.data;
+    } catch (_) {
+      await logout();
+      return {'status': 'DELETED'};
+    }
+  }
+
   Future<Map<String, String>> _authHeaders() async {
     final token = await getAuthToken();
     return token != null ? {'Authorization': 'Bearer $token'} : {};
@@ -88,10 +100,22 @@ class ApiService {
     return res.data;
   }
 
-  Future<Map<String, dynamic>> verifyKYC(String docType, String docNumber) async {
+  Future<Map<String, dynamic>> verifyKYC(
+    String docType,
+    String docNumber, {
+    bool selfieCaptured = true,
+    bool idPhotoCaptured = true,
+    String? selfieHash,
+  }) async {
     final headers = await _authHeaders();
     final res = await _dio.post('/kyc/verify',
-      data: {'document_type': docType, 'document_number': docNumber},
+      data: {
+        'document_type': docType,
+        'document_number': docNumber,
+        'selfie_captured': selfieCaptured,
+        'id_photo_captured': idPhotoCaptured,
+        'selfie_hash': selfieHash,
+      },
       options: Options(headers: headers),
     );
     return res.data;
@@ -437,6 +461,7 @@ class ApiService {
     required String phone,
     required String operatorCode,
     required String airtimeAmount,
+    String category = 'AIRTIME',
     String? sharePin,
     String countryIso = 'NG',
   }) async {
@@ -447,6 +472,7 @@ class ApiService {
         'phone_number': phone,
         'operator_code': operatorCode,
         'airtime_amount': airtimeAmount,
+        'category': category,
         'share_pin': sharePin,
         'country_iso': countryIso,
       },

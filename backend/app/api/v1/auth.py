@@ -140,3 +140,20 @@ def login(payload: UserLoginRequest):
         "wallet_address": user["wallet_address"],
         "roles": user["roles"]
     }
+
+
+@router.delete("/account")
+def delete_my_account(current_user: dict = Depends(get_current_user)):
+    """
+    In-App Account & Personal Data Deletion endpoint.
+    Required by Apple App Store Guideline 5.1.1(v) and Google Play User Data Policy.
+    """
+    user_id = current_user.get("user_id")
+    if user_id:
+        UserStore.delete_user(user_id)
+    event_publisher.publish_event("UserAccountDeleted", {"user_id": user_id})
+    return {
+        "status": "DELETED",
+        "user_id": user_id,
+        "message": "Your PayNora account, wallets, and personal data have been permanently deleted."
+    }
