@@ -303,13 +303,13 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> validateMeter({
-    required String discoCode,
+    String? discoCode,
     required String meterNumber,
     String meterType = 'PREPAID',
     String countryIso = 'NG',
   }) async {
     final res = await _dio.post('/bills/validate-meter', data: {
-      'disco_code': discoCode,
+      if (discoCode != null && discoCode.isNotEmpty) 'disco_code': discoCode,
       'meter_number': meterNumber,
       'meter_type': meterType,
       'country_iso': countryIso,
@@ -360,7 +360,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> purchaseElectricity({
-    required String discoCode,
+    String? discoCode,
     required String meterNumber,
     required String meterType,
     required String amount,
@@ -371,7 +371,7 @@ class ApiService {
     final res = await _dio.post(
       '/bills/electricity',
       data: {
-        'disco_code': discoCode,
+        if (discoCode != null && discoCode.isNotEmpty) 'disco_code': discoCode,
         'meter_number': meterNumber,
         'meter_type': meterType,
         'amount': amount,

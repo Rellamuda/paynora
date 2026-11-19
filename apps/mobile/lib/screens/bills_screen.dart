@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 
-/// Bills & Utilities: Airtime (call units), Mobile Data, Electricity tokens,
-/// plus One-Tap Airtime Reversal (100% refund) & Airtime-to-Cash Converter (90% payout).
-/// Features automatic phone-number -> telecom network detection across all countries.
+/// Bills & Utilities (Nigeria Only): Airtime, Mobile Data, Electricity tokens,
+/// 1-Tap 100% Bill Reversal & 90% Back-to-Cash Converter.
+/// Uses live backend network verification (ported-number safe) and live Flutterwave meter validation.
 class BillsScreen extends StatefulWidget {
   final int initialTab;
   const BillsScreen({super.key, this.initialTab = 0});
@@ -20,87 +20,71 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   final ApiService _api = ApiService();
 
   String _country = 'NG';
-  String _currency = 'NGN';
-  String _symbol = '₦';
-
-  static const Map<String, String> _currencySymbols = {
-    'NGN': '₦',
-    'GHS': 'GH₵',
-    'KES': 'KSh',
-    'ZAR': 'R',
-    'GBP': '£',
-    'USD': '\$',
-    'CAD': 'CA\$',
-    'EUR': '€',
-    'AED': 'AED ',
-    'INR': '₹',
-  };
+  bool _profileLoaded = false;
+  final String _currency = 'NGN';
+  final String _symbol = '₦';
 
   // Shared
-  List<dynamic> _operators = [];
+  List<Map<String, String>> _operators = [
+    {'name': 'MTN Nigeria', 'code': 'MTN', 'icon': '🟡'},
+    {'name': 'Airtel Nigeria', 'code': 'AIRTEL', 'icon': '🔴'},
+    {'name': 'Globacom (Glo)', 'code': 'GLO', 'icon': '🟢'},
+    {'name': '9mobile', 'code': '9MOBILE', 'icon': '🟢'},
+  ];
   bool _busy = false;
 
-  // Airtime (Auto-detected network from phone number)
+  // Airtime
   String? _airOperator;
   String? _airOperatorName;
   String? _airOperatorIcon;
+  bool _airVerified = false;
+  bool? _airPorted;
+  String? _airDetectMsg;
+  bool _airDetecting = false;
+  Timer? _airDebounce;
   final _airPhone = TextEditingController();
   final _airAmount = TextEditingController();
   List<Map<String, dynamic>> _recentAirtime = [];
 
-  // Data (Auto-detected network from phone number)
+  // Data
   String? _dataOperator;
   String? _dataOperatorName;
   String? _dataOperatorIcon;
+  bool _dataVerified = false;
+  bool? _dataPorted;
+  String? _dataDetectMsg;
+  bool _dataDetecting = false;
+  Timer? _dataDebounce;
   final _dataPhone = TextEditingController();
   List<dynamic> _plans = [];
   Map<String, dynamic>? _selectedPlan;
 
-  // Electricity (Auto-detected provider from meter number)
+  // Electricity (Live utility validation — no hardcoded mock names)
   List<dynamic> _discos = [];
+  String? _manualDisco;
   String? _disco;
   String? _discoName;
   String _meterType = 'PREPAID';
   final _meterNo = TextEditingController();
   final _powerAmount = TextEditingController();
   Map<String, dynamic>? _meterInfo;
+  String? _meterError;
   bool _validating = false;
   Timer? _meterDebounce;
 
   // To-Cash Converter (90% payout for AIRTIME, DATA, or ELECTRICITY)
-  String _a2cCategory = 'AIRTIME'; // 'AIRTIME', 'DATA', or 'ELECTRICITY'
+  String _a2cCategory = 'AIRTIME';
   String? _a2cOperator;
   String? _a2cOperatorName;
   String? _a2cOperatorIcon;
+  bool _a2cVerified = false;
+  bool? _a2cPorted;
+  String? _a2cDetectMsg;
+  bool _a2cDetecting = false;
+  Timer? _a2cDebounce;
   final _a2cPhone = TextEditingController();
   final _a2cAmount = TextEditingController(text: '2000');
   final _a2cSharePin = TextEditingController();
-
-  // Prefix -> Operator lookup table for instant client-side auto-detection
-  static const Map<String, String> _ngPrefixes = {
-    '0703': 'MTN', '0704': 'MTN', '0706': 'MTN', '0803': 'MTN', '0806': 'MTN',
-    '0810': 'MTN', '0813': 'MTN', '0814': 'MTN', '0816': 'MTN', '0903': 'MTN',
-    '0906': 'MTN', '0913': 'MTN', '0916': 'MTN', '0702': 'MTN',
-    '0701': 'AIRTEL', '0708': 'AIRTEL', '0802': 'AIRTEL', '0808': 'AIRTEL',
-    '0812': 'AIRTEL', '0901': 'AIRTEL', '0902': 'AIRTEL', '0904': 'AIRTEL',
-    '0907': 'AIRTEL', '0912': 'AIRTEL', '0911': 'AIRTEL',
-    '0705': 'GLO', '0805': 'GLO', '0807': 'GLO', '0811': 'GLO', '0815': 'GLO',
-    '0905': 'GLO', '0915': 'GLO',
-    '0809': '9MOBILE', '0817': '9MOBILE', '0818': '9MOBILE', '0908': '9MOBILE', '0909': '9MOBILE',
-  };
-
-  static const Map<String, String> _ghPrefixes = {
-    '024': 'MTN', '054': 'MTN', '055': 'MTN', '059': 'MTN', '025': 'MTN',
-    '020': 'TELECEL', '050': 'TELECEL',
-    '027': 'AT', '057': 'AT', '026': 'AT', '056': 'AT',
-  };
-
-  static const Map<String, String> _kePrefixes = {
-    '070': 'SAFARICOM', '071': 'SAFARICOM', '072': 'SAFARICOM', '074': 'SAFARICOM',
-    '079': 'SAFARICOM', '011': 'SAFARICOM',
-    '073': 'AIRTEL', '075': 'AIRTEL', '078': 'AIRTEL', '010': 'AIRTEL',
-    '077': 'TELKOM',
-  };
 
   @override
   void initState() {
@@ -112,6 +96,9 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _airDebounce?.cancel();
+    _dataDebounce?.cancel();
+    _a2cDebounce?.cancel();
     _meterDebounce?.cancel();
     _tabs.dispose();
     _airPhone.dispose();
@@ -128,156 +115,242 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   Future<void> _initUserCountryAndCatalog() async {
     try {
       final profile = await _api.getUserProfile();
-      final wallets = await _api.getWallets();
       final cIso = (profile['country_iso'] ?? 'NG').toString().toUpperCase();
-      final localW = wallets.firstWhere(
-        (w) => w['is_local'] == true || (w['currency'] != null && w['currency'] != 'USD'),
-        orElse: () => wallets.isNotEmpty ? wallets.first : {'currency': 'NGN'},
-      );
-      final ccy = (localW['currency'] ?? 'NGN').toString().toUpperCase();
       if (mounted) {
         setState(() {
           _country = cIso;
-          _currency = ccy;
-          _symbol = _currencySymbols[ccy] ?? '$ccy ';
+          _profileLoaded = true;
         });
       }
-    } catch (_) {}
-    await _loadCatalog();
+    } catch (_) {
+      if (mounted) setState(() => _profileLoaded = true);
+    }
+    if (_country == 'NG') {
+      await _loadCatalog();
+    }
   }
 
   Future<void> _loadCatalog() async {
     try {
-      final ops = await _api.getBillOperators(_country);
-      final discos = await _api.getElectricityProviders(_country);
-      setState(() {
-        _operators = ops;
-        _discos = discos;
-      });
-    } catch (_) {
-      setState(() {
-        _operators = [
-          {'name': 'MTN ($_country)', 'code': 'MTN', 'icon': '🟡'},
-          {'name': 'Airtel ($_country)', 'code': 'AIRTEL', 'icon': '🔴'},
-          {'name': 'Glo / National Telecom ($_country)', 'code': 'GLO', 'icon': '🟢'},
-          {'name': '9mobile / Mobile ($_country)', 'code': '9MOBILE', 'icon': '🟢'},
-        ];
-        _discos = [
-          {'code': 'IKEDC', 'name': 'Ikeja Electric (IKEDC)'},
-          {'code': 'EKEDC', 'name': 'Eko Electricity (EKEDC)'},
-          {'code': 'AEDC', 'name': 'Abuja Electricity (AEDC)'},
-          {'code': 'IBEDC', 'name': 'Ibadan Electricity (IBEDC)'},
-          {'code': 'EEDC', 'name': 'Enugu Electricity (EEDC)'},
-          {'code': 'PHED', 'name': 'Port Harcourt Electricity (PHED)'},
-          {'code': 'KEDCO', 'name': 'Kano Electricity (KEDCO)'},
-          {'code': 'BEDC', 'name': 'Benin Electricity (BEDC)'},
-        ];
-      });
-    }
+      final ops = await _api.getBillOperators('NG');
+      final discos = await _api.getElectricityProviders('NG');
+      if (mounted) {
+        setState(() {
+          if (ops.isNotEmpty) {
+            _operators = ops
+                .map((e) => {
+                      'name': '${e['name']}',
+                      'code': '${e['code']}',
+                      'icon': '${e['icon'] ?? '📶'}',
+                    })
+                .toList();
+          }
+          _discos = discos;
+        });
+      }
+    } catch (_) {}
   }
 
-  // Instant automatic network detection from phone number
-  Map<String, String>? _autoDetectNetworkFromPhone(String rawPhone) {
+  // ---------- Live Backend Mobile Network Detection (Ported-Number Safe) ----------
+  Future<void> _detectNetworkRemote({
+    required String rawPhone,
+    required void Function(Map<String, dynamic> res) onResult,
+    required void Function(bool loading) onLoading,
+  }) async {
     final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 4) return null;
-
-    String local = digits;
-    String c = _country;
-    if (digits.startsWith('234') && digits.length >= 7) {
-      local = '0${digits.substring(3)}';
-      c = 'NG';
-    } else if (digits.startsWith('233') && digits.length >= 6) {
-      local = '0${digits.substring(3)}';
-      c = 'GH';
-    } else if (digits.startsWith('254') && digits.length >= 6) {
-      local = '0${digits.substring(3)}';
-      c = 'KE';
+    if (digits.length < 10) return;
+    onLoading(true);
+    try {
+      final res = await _api.detectOperator(rawPhone.trim(), 'NG');
+      if (!mounted) return;
+      onResult(res);
+    } catch (e) {
+      if (!mounted) return;
+      onResult({
+        'detected': false,
+        'verified': false,
+        'message': _errMsg(e),
+      });
+    } finally {
+      if (mounted) onLoading(false);
     }
-    if (!local.startsWith('0') && c == 'NG') {
-      local = '0$local';
-    }
-
-    String? code;
-    if (c == 'NG' && local.length >= 4) {
-      code = _ngPrefixes[local.substring(0, 4)];
-    } else if (c == 'GH' && local.length >= 3) {
-      code = _ghPrefixes[local.substring(0, 3)];
-    } else if (c == 'KE' && local.length >= 3) {
-      code = _kePrefixes[local.substring(0, 3)];
-    }
-
-    final ops = _operators.isNotEmpty
-        ? _operators
-        : [
-            {'name': 'MTN', 'code': 'MTN', 'icon': '🟡'},
-            {'name': 'Airtel', 'code': 'AIRTEL', 'icon': '🔴'},
-            {'name': 'Globacom (Glo)', 'code': 'GLO', 'icon': '🟢'},
-            {'name': '9mobile', 'code': '9MOBILE', 'icon': '🟢'},
-          ];
-
-    if (code == null) {
-      final idx = int.parse(digits.substring(0, 4)) % ops.length;
-      code = '${ops[idx]['code']}';
-    }
-
-    final matched = ops.firstWhere(
-      (o) => '${o['code']}'.toUpperCase() == code!.toUpperCase(),
-      orElse: () => ops.first,
-    );
-    return {
-      'code': '${matched['code']}',
-      'name': '${matched['name']}',
-      'icon': '${matched['icon'] ?? '📶'}',
-    };
   }
 
   void _onAirPhoneChanged(String val) {
-    final det = _autoDetectNetworkFromPhone(val);
-    setState(() {
-      _airOperator = det?['code'];
-      _airOperatorName = det?['name'];
-      _airOperatorIcon = det?['icon'];
+    _airDebounce?.cancel();
+    final digits = val.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      setState(() {
+        _airOperator = null;
+        _airOperatorName = null;
+        _airOperatorIcon = null;
+        _airVerified = false;
+        _airPorted = null;
+        _airDetectMsg = null;
+        _airDetecting = false;
+      });
+      return;
+    }
+    _airDebounce = Timer(const Duration(milliseconds: 350), () {
+      _detectNetworkRemote(
+        rawPhone: val,
+        onLoading: (l) => setState(() => _airDetecting = l),
+        onResult: (res) {
+          setState(() {
+            if (res['detected'] == true) {
+              _airOperator = res['operator_code']?.toString();
+              _airOperatorName = res['operator_name']?.toString();
+              _airOperatorIcon = res['icon']?.toString() ?? '📶';
+              _airVerified = res['verified'] == true;
+              _airPorted = res['ported'] is bool ? res['ported'] as bool : null;
+              _airDetectMsg = res['message']?.toString();
+            } else {
+              _airOperator = null;
+              _airOperatorName = null;
+              _airVerified = false;
+              _airPorted = null;
+              _airDetectMsg = res['message']?.toString() ?? 'Could not auto-detect network. Tap Change to select.';
+            }
+          });
+        },
+      );
     });
   }
 
   void _onDataPhoneChanged(String val) {
-    final det = _autoDetectNetworkFromPhone(val);
-    final prevOp = _dataOperator;
-    setState(() {
-      _dataOperator = det?['code'];
-      _dataOperatorName = det?['name'];
-      _dataOperatorIcon = det?['icon'];
-    });
-    if (_dataOperator != null && _dataOperator != prevOp) {
-      _loadPlans(_dataOperator!);
-    }
-  }
-
-  void _onA2CPhoneChanged(String val) {
-    if (_a2cCategory == 'ELECTRICITY') {
-      final digits = val.replaceAll(RegExp(r'\D'), '');
-      if (digits.length < 2) {
-        setState(() {
-          _a2cOperator = null;
-          _a2cOperatorName = null;
-          _a2cOperatorIcon = null;
-        });
-        return;
-      }
-      final det = _autoDetectDiscoFromMeter(digits);
+    _dataDebounce?.cancel();
+    final digits = val.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
       setState(() {
-        _a2cOperator = det['code'];
-        _a2cOperatorName = det['name'];
-        _a2cOperatorIcon = '⚡';
+        _dataOperator = null;
+        _dataOperatorName = null;
+        _dataOperatorIcon = null;
+        _dataVerified = false;
+        _dataPorted = null;
+        _dataDetectMsg = null;
+        _dataDetecting = false;
+        _plans = [];
+        _selectedPlan = null;
       });
       return;
     }
-    final det = _autoDetectNetworkFromPhone(val);
-    setState(() {
-      _a2cOperator = det?['code'];
-      _a2cOperatorName = det?['name'];
-      _a2cOperatorIcon = det?['icon'];
+    _dataDebounce = Timer(const Duration(milliseconds: 350), () {
+      _detectNetworkRemote(
+        rawPhone: val,
+        onLoading: (l) => setState(() => _dataDetecting = l),
+        onResult: (res) {
+          final prevOp = _dataOperator;
+          setState(() {
+            if (res['detected'] == true) {
+              _dataOperator = res['operator_code']?.toString();
+              _dataOperatorName = res['operator_name']?.toString();
+              _dataOperatorIcon = res['icon']?.toString() ?? '📶';
+              _dataVerified = res['verified'] == true;
+              _dataPorted = res['ported'] is bool ? res['ported'] as bool : null;
+              _dataDetectMsg = res['message']?.toString();
+            } else {
+              _dataOperator = null;
+              _dataOperatorName = null;
+              _dataVerified = false;
+              _dataPorted = null;
+              _dataDetectMsg = res['message']?.toString() ?? 'Could not auto-detect network. Tap Change to select.';
+            }
+          });
+          if (_dataOperator != null && _dataOperator != prevOp) {
+            _loadPlans(_dataOperator!);
+          }
+        },
+      );
     });
+  }
+
+  void _onA2CPhoneChanged(String val) {
+    _a2cDebounce?.cancel();
+    final digits = val.replaceAll(RegExp(r'\D'), '');
+    if (_a2cCategory == 'ELECTRICITY') {
+      setState(() {
+        _a2cOperator = null;
+        _a2cOperatorName = null;
+        _a2cOperatorIcon = '⚡';
+        _a2cVerified = false;
+        _a2cDetectMsg = digits.length >= 10
+            ? 'Electricity company will be verified against your meter record.'
+            : null;
+      });
+      return;
+    }
+    if (digits.length < 10) {
+      setState(() {
+        _a2cOperator = null;
+        _a2cOperatorName = null;
+        _a2cOperatorIcon = null;
+        _a2cVerified = false;
+        _a2cPorted = null;
+        _a2cDetectMsg = null;
+        _a2cDetecting = false;
+      });
+      return;
+    }
+    _a2cDebounce = Timer(const Duration(milliseconds: 350), () {
+      _detectNetworkRemote(
+        rawPhone: val,
+        onLoading: (l) => setState(() => _a2cDetecting = l),
+        onResult: (res) {
+          setState(() {
+            if (res['detected'] == true) {
+              _a2cOperator = res['operator_code']?.toString();
+              _a2cOperatorName = res['operator_name']?.toString();
+              _a2cOperatorIcon = res['icon']?.toString() ?? '📶';
+              _a2cVerified = res['verified'] == true;
+              _a2cPorted = res['ported'] is bool ? res['ported'] as bool : null;
+              _a2cDetectMsg = res['message']?.toString();
+            } else {
+              _a2cOperator = null;
+              _a2cOperatorName = null;
+              _a2cVerified = false;
+              _a2cPorted = null;
+              _a2cDetectMsg = res['message']?.toString();
+            }
+          });
+        },
+      );
+    });
+  }
+
+  Future<void> _pickNetworkManually({
+    required void Function(String code, String name, String icon) onPicked,
+  }) async {
+    final isDark = ThemeNotifier.instance.isDarkMode;
+    final picked = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      backgroundColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Current Mobile Network', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            const Text(
+              'If this number was ported to another carrier, choose its current Nigerian network.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 14),
+            ..._operators.map((op) => ListTile(
+                  leading: Text(op['icon'] ?? '📶', style: const TextStyle(fontSize: 22)),
+                  title: Text(op['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.pop(ctx, op),
+                )),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      onPicked(picked['code']!, picked['name']!, picked['icon'] ?? '📶');
+    }
   }
 
   Future<void> _loadRecentAirtime() async {
@@ -297,34 +370,24 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _selectedPlan = null;
     });
     try {
-      final plans = await _api.getDataPlans(operatorCode, _country);
+      final plans = await _api.getDataPlans(operatorCode, 'NG');
       if (mounted) {
         setState(() {
           _plans = plans;
           if (plans.isNotEmpty) _selectedPlan = Map<String, dynamic>.from(plans.first as Map);
         });
       }
-    } catch (_) {
-      final fallbackPlans = [
-        {'id': 'plan_1gb_1d', 'name': '$operatorCode 1GB Daily Boost', 'allowance': '1GB', 'validity': '1 Day', 'amount': _currency == 'NGN' ? '350.00' : '2.00'},
-        {'id': 'plan_2_5gb_2d', 'name': '$operatorCode 2.5GB 2-Day Bundle', 'allowance': '2.5GB', 'validity': '2 Days', 'amount': _currency == 'NGN' ? '600.00' : '4.00'},
-        {'id': 'plan_6gb_7d', 'name': '$operatorCode 6GB Weekly Mega', 'allowance': '6GB', 'validity': '7 Days', 'amount': _currency == 'NGN' ? '1500.00' : '8.00'},
-        {'id': 'plan_12gb_30d', 'name': '$operatorCode 12GB Monthly Smart', 'allowance': '12GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '3500.00' : '15.00'},
-        {'id': 'plan_25gb_30d', 'name': '$operatorCode 25GB Monthly Max', 'allowance': '25GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '6500.00' : '25.00'},
-        {'id': 'plan_40gb_30d', 'name': '$operatorCode 40GB Monthly Executive', 'allowance': '40GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '10000.00' : '40.00'},
-      ];
-      if (mounted) {
-        setState(() {
-          _plans = fallbackPlans;
-          _selectedPlan = fallbackPlans.first;
-        });
-      }
+    } catch (e) {
+      if (mounted) _snack(_errMsg(e));
     }
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  bool _validPhone(String p) => p.replaceAll(RegExp(r'\D'), '').length >= 7;
+  bool _validNigerianPhone(String p) {
+    final d = p.replaceAll(RegExp(r'\D'), '');
+    return d.length == 11 || (d.startsWith('234') && d.length == 13);
+  }
 
   String _errMsg(Object e) {
     try {
@@ -332,26 +395,49 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       final detail = dyn.response?.data?['detail'];
       if (detail != null) return '$detail';
     } catch (_) {}
-    return 'Request failed. Please try again.';
+    return 'Request failed. Please check your connection and try again.';
   }
 
   // ---------- Actions ----------
   Future<void> _buyAirtime() async {
-    if (!_validPhone(_airPhone.text)) return _snack('Enter a valid phone number.');
-    final det = _autoDetectNetworkFromPhone(_airPhone.text);
-    final opCode = _airOperator ?? det?['code'] ?? 'MTN';
-    final opName = _airOperatorName ?? det?['name'] ?? opCode;
+    if (!_validNigerianPhone(_airPhone.text)) {
+      return _snack('Enter a valid 11-digit Nigerian phone number (e.g. 0803 123 4567).');
+    }
+    if (_airOperator == null) {
+      await _detectNetworkRemote(
+        rawPhone: _airPhone.text,
+        onLoading: (l) => setState(() => _airDetecting = l),
+        onResult: (res) {
+          if (res['detected'] == true) {
+            _airOperator = res['operator_code']?.toString();
+            _airOperatorName = res['operator_name']?.toString();
+            _airOperatorIcon = res['icon']?.toString() ?? '📶';
+            _airVerified = res['verified'] == true;
+          }
+        },
+      );
+    }
+    if (_airOperator == null) {
+      return _snack('Please verify or select the mobile network first.');
+    }
     final amt = double.tryParse(_airAmount.text) ?? 0;
-    if (amt <= 0) return _snack('Enter a valid airtime amount.');
+    if (amt < 50) return _snack('Minimum airtime amount is ₦50.');
     setState(() => _busy = true);
     try {
       final res = await _api.purchaseAirtime(
-          phone: _airPhone.text, operatorCode: opCode, amount: amt.toStringAsFixed(2), countryIso: _country);
+        phone: _airPhone.text.trim(),
+        operatorCode: _airOperator!,
+        amount: amt.toStringAsFixed(2),
+        countryIso: 'NG',
+      );
       final txId = '${res['transaction_id']}';
+      final usedOp = '${res['operator'] ?? _airOperator}';
+      final usedName = '${res['operator_name'] ?? _airOperatorName ?? usedOp}';
       setState(() {
         _recentAirtime.insert(0, {
           'transaction_id': txId,
-          'operator': opCode,
+          'category': 'AIRTIME',
+          'operator': usedOp,
           'phone_number': _airPhone.text,
           'amount': '${res['amount']}',
           'reversed': false,
@@ -360,7 +446,8 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _showReceipt(
         'Airtime Sent',
         [
-          ['Verified Network', opName],
+          ['Verified Network', usedName],
+          if (res['operator_corrected'] == true) ['Ported Check', 'Corrected automatically before purchase'],
           ['Phone', _airPhone.text],
           ['Amount', '$_symbol${res['amount']}'],
           if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
@@ -368,7 +455,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
         reversibleAirtimeTxId: txId,
         reversibleAmount: '${res['amount']}',
-        reversibleOperator: opCode,
+        reversibleOperator: usedOp,
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -389,139 +476,14 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         }
       });
       _showReceipt(
-        'Airtime Reversed to Cash',
+        'Reversed to Cash',
         [
           ['Type', '100% Instant Reversal'],
-          ['Network', operatorCode],
+          ['Provider', operatorCode],
           ['Cash Refunded', '+$_symbol${res['refunded_amount'] ?? amount}'],
           if (res['wallet_balance_after'] != null) ['New Wallet Balance', '$_symbol${res['wallet_balance_after']}'],
           ['Reference', txId],
         ],
-      );
-    } catch (e) {
-      setState(() {
-        for (final item in _recentAirtime) {
-          if (item['transaction_id'] == txId) {
-            item['reversed'] = true;
-          }
-        }
-      });
-      _showReceipt(
-        'Airtime Reversed to Cash',
-        [
-          ['Type', '100% Instant Reversal'],
-          ['Network', operatorCode],
-          ['Cash Refunded', '+$_symbol$amount'],
-          ['Reference', txId],
-        ],
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _convertAirtimeToCash() async {
-    if (_a2cPhone.text.replaceAll(RegExp(r'\D'), '').length < 6) {
-      return _snack(_a2cCategory == 'ELECTRICITY'
-          ? 'Enter a valid meter or token number.'
-          : 'Enter the phone number holding the ${_a2cCategory.toLowerCase()}.');
-    }
-    String opCode;
-    String opName;
-    if (_a2cCategory == 'ELECTRICITY') {
-      final det = _autoDetectDiscoFromMeter(_a2cPhone.text.replaceAll(RegExp(r'\D'), ''));
-      opCode = _a2cOperator ?? det['code'] ?? 'IKEDC';
-      opName = _a2cOperatorName ?? det['name'] ?? opCode;
-    } else {
-      final det = _autoDetectNetworkFromPhone(_a2cPhone.text);
-      opCode = _a2cOperator ?? det?['code'] ?? 'AIRTEL';
-      opName = _a2cOperatorName ?? det?['name'] ?? opCode;
-    }
-    final amt = double.tryParse(_a2cAmount.text) ?? 0;
-    if (amt <= 0) return _snack('Enter a valid amount to convert.');
-    final cashPayout = (amt * 0.90).toStringAsFixed(2);
-    final fee = (amt * 0.10).toStringAsFixed(2);
-
-    setState(() => _busy = true);
-    try {
-      final res = await _api.convertAirtimeToCash(
-        phone: _a2cPhone.text,
-        operatorCode: opCode,
-        airtimeAmount: amt.toStringAsFixed(2),
-        category: _a2cCategory,
-        sharePin: _a2cSharePin.text.trim().isEmpty ? null : _a2cSharePin.text.trim(),
-        countryIso: _country,
-      );
-      _showReceipt(
-        '$_a2cCategory Converted to Cash',
-        [
-          ['Category', _a2cCategory],
-          ['Verified Provider', opName],
-          [_a2cCategory == 'ELECTRICITY' ? 'Meter / Token' : 'Phone', _a2cPhone.text],
-          ['Value Converted', '$_symbol${res['airtime_amount'] ?? amt.toStringAsFixed(2)}'],
-          ['Conversion Fee (10%)', '-$_symbol${res['conversion_fee'] ?? fee}'],
-          ['Cash Credited (90%)', '+$_symbol${res['cash_credited'] ?? cashPayout}'],
-          if (res['wallet_balance_after'] != null) ['New Wallet Balance', '$_symbol${res['wallet_balance_after']}'],
-          ['Reference', '${res['conversion_id']}'],
-        ],
-      );
-    } catch (_) {
-      _showReceipt(
-        '$_a2cCategory Converted to Cash',
-        [
-          ['Category', _a2cCategory],
-          ['Verified Provider', opName],
-          [_a2cCategory == 'ELECTRICITY' ? 'Meter / Token' : 'Phone', _a2cPhone.text],
-          ['Value Converted', '$_symbol${amt.toStringAsFixed(2)}'],
-          ['Conversion Fee (10%)', '-$_symbol$fee'],
-          ['Cash Credited (90%)', '+$_symbol$cashPayout'],
-          ['Reference', 'a2c_${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}'],
-        ],
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _buyData() async {
-    if (!_validPhone(_dataPhone.text)) return _snack('Enter a valid phone number.');
-    final det = _autoDetectNetworkFromPhone(_dataPhone.text);
-    final opCode = _dataOperator ?? det?['code'] ?? 'MTN';
-    final opName = _dataOperatorName ?? det?['name'] ?? opCode;
-    if (_selectedPlan == null) return _snack('Select a data plan.');
-    setState(() => _busy = true);
-    try {
-      final res = await _api.purchaseData(
-        phone: _dataPhone.text,
-        operatorCode: opCode,
-        planId: '${_selectedPlan!['id']}',
-        amount: '${_selectedPlan!['amount']}',
-        countryIso: _country,
-      );
-      final txId = '${res['transaction_id']}';
-      setState(() {
-        _recentAirtime.insert(0, {
-          'transaction_id': txId,
-          'category': 'DATA',
-          'operator': opCode,
-          'phone_number': _dataPhone.text,
-          'amount': '${res['amount']}',
-          'reversed': false,
-        });
-      });
-      _showReceipt(
-        'Data Activated',
-        [
-          ['Verified Network', opName],
-          ['Plan', '${_selectedPlan!['name']}'],
-          ['Phone', _dataPhone.text],
-          ['Amount', '$_symbol${res['amount']}'],
-          if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
-          ['Reference', txId],
-        ],
-        reversibleAirtimeTxId: txId,
-        reversibleAmount: '${res['amount']}',
-        reversibleOperator: '$opCode DATA',
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -530,110 +492,156 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     }
   }
 
+  Future<void> _convertAirtimeToCash() async {
+    if (_a2cCategory == 'ELECTRICITY') {
+      if (_a2cPhone.text.replaceAll(RegExp(r'\D'), '').length < 10) {
+        return _snack('Enter a valid 10–13 digit Nigerian meter number.');
+      }
+    } else if (!_validNigerianPhone(_a2cPhone.text)) {
+      return _snack('Enter a valid 11-digit Nigerian phone number.');
+    }
+    final amt = double.tryParse(_a2cAmount.text) ?? 0;
+    if (amt <= 0) return _snack('Enter a valid amount to convert.');
+
+    setState(() => _busy = true);
+    try {
+      final res = await _api.convertAirtimeToCash(
+        phone: _a2cPhone.text.trim(),
+        operatorCode: _a2cOperator ?? (_a2cCategory == 'ELECTRICITY' ? 'ELECTRICITY' : 'MTN'),
+        airtimeAmount: amt.toStringAsFixed(2),
+        category: _a2cCategory,
+        sharePin: _a2cSharePin.text.trim().isEmpty ? null : _a2cSharePin.text.trim(),
+        countryIso: 'NG',
+      );
+      _showReceipt(
+        '$_a2cCategory Converted to Cash',
+        [
+          ['Category', _a2cCategory],
+          ['Verified Provider', '${res['operator_name'] ?? _a2cOperatorName ?? ''}'],
+          [_a2cCategory == 'ELECTRICITY' ? 'Meter' : 'Phone', _a2cPhone.text],
+          ['Value Converted', '$_symbol${res['airtime_amount']}'],
+          ['Conversion Fee (10%)', '-$_symbol${res['conversion_fee']}'],
+          ['Cash Credited (90%)', '+$_symbol${res['cash_credited']}'],
+          if (res['wallet_balance_after'] != null) ['New Wallet Balance', '$_symbol${res['wallet_balance_after']}'],
+          ['Reference', '${res['conversion_id']}'],
+        ],
+      );
+    } catch (e) {
+      _snack(_errMsg(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _buyData() async {
+    if (!_validNigerianPhone(_dataPhone.text)) {
+      return _snack('Enter a valid 11-digit Nigerian phone number (e.g. 0802 123 4567).');
+    }
+    if (_dataOperator == null) {
+      return _snack('Please verify or select the mobile network first.');
+    }
+    if (_selectedPlan == null) return _snack('Select a data plan.');
+    setState(() => _busy = true);
+    try {
+      final res = await _api.purchaseData(
+        phone: _dataPhone.text.trim(),
+        operatorCode: _dataOperator!,
+        planId: '${_selectedPlan!['id']}',
+        amount: '${_selectedPlan!['amount']}',
+        countryIso: 'NG',
+      );
+      final txId = '${res['transaction_id']}';
+      final usedOp = '${res['operator'] ?? _dataOperator}';
+      final usedName = '${res['operator_name'] ?? _dataOperatorName ?? usedOp}';
+      setState(() {
+        _recentAirtime.insert(0, {
+          'transaction_id': txId,
+          'category': 'DATA',
+          'operator': usedOp,
+          'phone_number': _dataPhone.text,
+          'amount': '${res['amount']}',
+          'reversed': false,
+        });
+      });
+      _showReceipt(
+        'Data Activated',
+        [
+          ['Verified Network', usedName],
+          ['Plan', '${_selectedPlan!['name']}'],
+          ['Phone', _dataPhone.text],
+          ['Amount', '$_symbol${res['amount']}'],
+          if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
+          ['Reference', txId],
+        ],
+        reversibleAirtimeTxId: txId,
+        reversibleAmount: '${res['amount']}',
+        reversibleOperator: '$usedOp DATA',
+      );
+    } catch (e) {
+      _snack(_errMsg(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  // ---------- Live Electricity Meter Verification (NO hardcoded mock names) ----------
   Future<void> _validateMeter() async {
     final meter = _meterNo.text.replaceAll(RegExp(r'\D'), '');
-    if (meter.length < 6) return _snack('Enter a valid meter number (at least 6 digits).');
+    if (meter.length < 10 || meter.length > 13) {
+      setState(() {
+        _meterInfo = null;
+        _disco = null;
+        _discoName = null;
+        _meterError = 'Nigerian meter numbers are 10–13 digits. Please check the number.';
+      });
+      return;
+    }
 
-    // Auto-detect electricity company from meter number prefix (STS IIN prefix)
-    final det = _autoDetectDiscoFromMeter(meter);
     setState(() {
-      _disco = det['code'];
-      _discoName = det['name'];
       _validating = true;
       _meterInfo = null;
+      _meterError = null;
+      _disco = null;
+      _discoName = null;
     });
     try {
       final res = await _api.validateMeter(
-          discoCode: _disco!, meterNumber: meter, meterType: _meterType, countryIso: _country);
+        discoCode: _manualDisco,
+        meterNumber: meter,
+        meterType: _meterType,
+        countryIso: 'NG',
+      );
+      if (!mounted) return;
       setState(() {
-        _disco = (res['disco'] ?? _disco).toString();
-        _discoName = (res['disco_name'] ?? _discoName).toString();
+        _disco = (res['disco'] ?? res['biller_code'])?.toString();
+        _discoName = (res['disco_name'] ?? res['biller_name'])?.toString();
         _meterInfo = res;
+        _meterError = null;
       });
-    } catch (_) {
-      const mockNames = [
-        'OLUWASEUN ADEKUNLE',
-        'CHIDI OKONKWO',
-        'EMMANUEL DANJUMA',
-        'FATIMA BELLO',
-        'GRACE AFOLABI',
-      ];
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _meterInfo = {
-          'status': 'VALID',
-          'disco': _disco,
-          'disco_name': _discoName,
-          'meter_number': meter,
-          'customer_name': mockNames[meter.hashCode.abs() % mockNames.length],
-          'address': 'Plot ${(meter.hashCode.abs() % 80) + 1}, Verified Power Grid ($_country)',
-        };
+        _meterInfo = null;
+        _disco = null;
+        _discoName = null;
+        _meterError = _errMsg(e);
       });
     } finally {
       if (mounted) setState(() => _validating = false);
     }
   }
 
-  Map<String, String> _autoDetectDiscoFromMeter(String digits) {
-    const ngMeterPrefixMap = {
-      '45': 'IKEDC', '04': 'IKEDC', '10': 'IKEDC',
-      '43': 'EKEDC', '01': 'EKEDC', '11': 'EKEDC',
-      '47': 'AEDC',  '07': 'AEDC',  '13': 'AEDC',
-      '62': 'IBEDC', '14': 'IBEDC', '15': 'IBEDC',
-      '54': 'EEDC',  '16': 'EEDC',  '17': 'EEDC',
-      '02': 'PHED',  '18': 'PHED',  '20': 'PHED',
-      '30': 'KEDCO', '21': 'KEDCO', '22': 'KEDCO',
-      '19': 'BEDC',  '95': 'BEDC',  '23': 'BEDC',
-    };
-    final list = _discos.isNotEmpty
-        ? _discos
-        : [
-            {'code': 'IKEDC', 'name': 'Ikeja Electric (IKEDC)'},
-            {'code': 'EKEDC', 'name': 'Eko Electricity (EKEDC)'},
-            {'code': 'AEDC', 'name': 'Abuja Electricity (AEDC)'},
-            {'code': 'IBEDC', 'name': 'Ibadan Electricity (IBEDC)'},
-            {'code': 'EEDC', 'name': 'Enugu Electricity (EEDC)'},
-            {'code': 'PHED', 'name': 'Port Harcourt Electricity (PHED)'},
-            {'code': 'KEDCO', 'name': 'Kano Electricity (KEDCO)'},
-            {'code': 'BEDC', 'name': 'Benin Electricity (BEDC)'},
-          ];
-
-    String? code;
-    if (_country == 'NG' && digits.length >= 2) {
-      code = ngMeterPrefixMap[digits.substring(0, 2)];
-    }
-    if (code == null && digits.length >= 2) {
-      final idx = int.parse(digits.substring(0, 2)) % list.length;
-      code = '${list[idx]['code']}';
-    }
-    final matched = list.firstWhere(
-      (d) => '${d['code']}'.toUpperCase() == (code ?? '').toUpperCase(),
-      orElse: () => list.first,
-    );
-    return {
-      'code': '${matched['code']}',
-      'name': '${matched['name']}',
-    };
-  }
-
   void _onMeterChanged(String val) {
     final digits = val.replaceAll(RegExp(r'\D'), '');
     _meterDebounce?.cancel();
-    if (digits.length < 2) {
-      setState(() {
-        _disco = null;
-        _discoName = null;
-        _meterInfo = null;
-      });
-      return;
-    }
-    final det = _autoDetectDiscoFromMeter(digits);
     setState(() {
-      _disco = det['code'];
-      _discoName = det['name'];
+      _disco = null;
+      _discoName = null;
       _meterInfo = null;
+      _meterError = null;
     });
-    if (digits.length >= 6) {
-      _meterDebounce = Timer(const Duration(milliseconds: 350), _validateMeter);
+    if (digits.length >= 10) {
+      _meterDebounce = Timer(const Duration(milliseconds: 500), _validateMeter);
     }
   }
 
@@ -643,23 +651,25 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       if (_meterInfo == null) return;
     }
     final amt = double.tryParse(_powerAmount.text) ?? 0;
-    if (amt <= 0) return _snack('Enter a valid electricity payment amount.');
+    if (amt < 500) return _snack('Minimum electricity payment is ₦500.');
     setState(() => _busy = true);
     try {
       final res = await _api.purchaseElectricity(
-        discoCode: _disco ?? 'IKEDC',
-        meterNumber: _meterNo.text,
+        discoCode: _disco,
+        meterNumber: _meterNo.text.trim(),
         meterType: _meterType,
         amount: amt.toStringAsFixed(2),
-        customerName: _meterInfo!['customer_name'],
-        countryIso: _country,
+        customerName: _meterInfo!['customer_name']?.toString(),
+        countryIso: 'NG',
       );
       final txId = '${res['transaction_id']}';
+      final usedDisco = '${res['disco'] ?? _disco ?? 'POWER'}';
+      final usedDiscoName = '${res['disco_name'] ?? _discoName ?? usedDisco}';
       setState(() {
         _recentAirtime.insert(0, {
           'transaction_id': txId,
           'category': 'ELECTRICITY',
-          'operator': _disco ?? 'IKEDC',
+          'operator': usedDisco,
           'phone_number': _meterNo.text,
           'amount': '${res['amount']}',
           'reversed': false,
@@ -668,18 +678,18 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _showReceipt(
         _meterType == 'PREPAID' ? 'Token Generated' : 'Bill Paid',
         [
-          ['Verified Provider', _discoName ?? _disco ?? 'Power Grid'],
+          ['Verified Provider', usedDiscoName],
           ['Meter', _meterNo.text],
           ['Customer', '${res['customer_name']}'],
           ['Amount', '$_symbol${res['amount']}'],
-          if (_meterType == 'PREPAID') ['Units', '${res['units']}'],
+          if (_meterType == 'PREPAID' && (res['units'] ?? '').toString().isNotEmpty) ['Units', '${res['units']}'],
           if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
           ['Reference', txId],
         ],
         token: _meterType == 'PREPAID' ? '${res['token']}' : null,
         reversibleAirtimeTxId: txId,
         reversibleAmount: '${res['amount']}',
-        reversibleOperator: '${_disco ?? 'POWER'} ELECTRICITY',
+        reversibleOperator: '$usedDisco ELECTRICITY',
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -755,7 +765,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                     _reverseAirtimePurchase(
                       reversibleAirtimeTxId,
                       reversibleAmount ?? '0.00',
-                      reversibleOperator ?? 'AIRTEL',
+                      reversibleOperator ?? 'AIRTIME',
                     );
                   },
                   icon: const Icon(Icons.replay_circle_filled_rounded, color: PayNoraColors.warning),
@@ -790,37 +800,72 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeNotifier.instance.isDarkMode;
+    final lockedOutsideNigeria = _profileLoaded && _country != 'NG';
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Bills & Power ($_country · $_currency)',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Colors.white)),
+        title: const Text('Bills & Power (Nigeria 🇳🇬 · NGN)',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Colors.white)),
         backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: PayNoraColors.brandSecondary,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-          tabs: const [
-            Tab(icon: Icon(Icons.phone_in_talk), text: 'Airtime'),
-            Tab(icon: Icon(Icons.wifi), text: 'Data'),
-            Tab(icon: Icon(Icons.bolt), text: 'Electricity'),
-            Tab(icon: Icon(Icons.currency_exchange), text: 'To Cash'),
-          ],
-        ),
+        bottom: lockedOutsideNigeria
+            ? null
+            : TabBar(
+                controller: _tabs,
+                indicatorColor: PayNoraColors.brandSecondary,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                tabs: const [
+                  Tab(icon: Icon(Icons.phone_in_talk), text: 'Airtime'),
+                  Tab(icon: Icon(Icons.wifi), text: 'Data'),
+                  Tab(icon: Icon(Icons.bolt), text: 'Electricity'),
+                  Tab(icon: Icon(Icons.currency_exchange), text: 'To Cash'),
+                ],
+              ),
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          _airtimeTab(isDark),
-          _dataTab(isDark),
-          _electricityTab(isDark),
-          _airtimeToCashTab(isDark),
-        ],
-      ),
+      body: lockedOutsideNigeria
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark ? PayNoraColors.darkCard : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? PayNoraColors.darkBorder : PayNoraColors.lightBorder),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.lock_outline_rounded, size: 54, color: PayNoraColors.warning),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Nigeria Only Service',
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Airtime, Mobile Data, and Electricity bill payments are currently locked to Nigerian (NG / NGN) accounts only.\n\nYour account country is $_country.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : TabBarView(
+              controller: _tabs,
+              children: [
+                _airtimeTab(isDark),
+                _dataTab(isDark),
+                _electricityTab(isDark),
+                _airtimeToCashTab(isDark),
+              ],
+            ),
     );
   }
 
@@ -840,35 +885,82 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         child: Text(t, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
       );
 
-  Widget _detectedNetworkBadge(String? name, String? icon) {
-    if (name == null) {
+  Widget _networkStatusBadge({
+    required String? name,
+    required String? icon,
+    required bool verified,
+    required bool? ported,
+    required bool detecting,
+    required String? message,
+    required VoidCallback onChangeNetwork,
+  }) {
+    if (detecting) {
       return const Padding(
-        padding: EdgeInsets.only(top: 8),
-        child: Text(
-          '✨ Network operator will be detected & verified automatically as you type the phone number.',
-          style: TextStyle(fontSize: 11, color: Colors.grey),
+        padding: EdgeInsets.only(top: 10),
+        child: Row(
+          children: [
+            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 8),
+            Text('Checking live network & porting status...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
         ),
       );
     }
+    if (name == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                message ?? 'Enter an 11-digit Nigerian phone number to detect its current network.',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: onChangeNetwork,
+              child: const Text('Select Network', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final color = verified ? PayNoraColors.success : PayNoraColors.warning;
+    final badgeTitle = verified
+        ? (ported == true ? 'Live Verified (Ported): $name' : 'Live Verified Network: $name')
+        : 'Prefix Detected: $name (Tap Change if ported)';
+
     return Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: PayNoraColors.success.withOpacity(0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: PayNoraColors.success.withOpacity(0.4)),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified, color: PayNoraColors.success, size: 18),
+          Icon(verified ? Icons.verified : Icons.sim_card_alert_outlined, color: color, size: 18),
           const SizedBox(width: 8),
           Text(icon ?? '📶', style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(
-              'Auto-Detected Network: $name',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.success, fontSize: 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  badgeTitle,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: color, fontSize: 12),
+                ),
+                if (message != null && message.isNotEmpty)
+                  Text(message, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+              ],
             ),
+          ),
+          TextButton(
+            onPressed: onChangeNetwork,
+            child: const Text('Change', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -892,25 +984,40 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       );
 
   Widget _airtimeTab(bool isDark) {
-    final quickAmounts = _currency == 'NGN'
-        ? ['200', '500', '1000', '2000', '5000']
-        : ['5', '10', '20', '50', '100'];
+    final quickAmounts = ['200', '500', '1000', '2000', '5000'];
 
     return ListView(padding: const EdgeInsets.all(20), children: [
       _card(isDark, [
-        _label('PHONE NUMBER (AUTO-DETECTS NETWORK)'),
+        _label('NIGERIAN PHONE NUMBER (LIVE NETWORK CHECK)'),
         TextField(
           controller: _airPhone,
           keyboardType: TextInputType.phone,
           onChanged: _onAirPhoneChanged,
           decoration: const InputDecoration(
-            hintText: 'Enter phone number (e.g. 0803 123 4567)',
+            hintText: 'Enter 11-digit number (e.g. 0803 123 4567)',
             prefixIcon: Icon(Icons.phone_android),
           ),
         ),
-        _detectedNetworkBadge(_airOperatorName, _airOperatorIcon),
+        _networkStatusBadge(
+          name: _airOperatorName,
+          icon: _airOperatorIcon,
+          verified: _airVerified,
+          ported: _airPorted,
+          detecting: _airDetecting,
+          message: _airDetectMsg,
+          onChangeNetwork: () => _pickNetworkManually(
+            onPicked: (code, name, icon) => setState(() {
+              _airOperator = code;
+              _airOperatorName = name;
+              _airOperatorIcon = icon;
+              _airVerified = true;
+              _airPorted = false;
+              _airDetectMsg = 'Network confirmed manually by you.';
+            }),
+          ),
+        ),
         const SizedBox(height: 18),
-        _label('AMOUNT ($_currency)'),
+        _label('AMOUNT (NGN)'),
         TextField(
           controller: _airAmount,
           keyboardType: TextInputType.number,
@@ -948,17 +1055,38 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   Widget _dataTab(bool isDark) {
     return ListView(padding: const EdgeInsets.all(20), children: [
       _card(isDark, [
-        _label('PHONE NUMBER (AUTO-DETECTS NETWORK & PLANS)'),
+        _label('NIGERIAN PHONE NUMBER (LIVE NETWORK & PLANS)'),
         TextField(
           controller: _dataPhone,
           keyboardType: TextInputType.phone,
           onChanged: _onDataPhoneChanged,
           decoration: const InputDecoration(
-            hintText: 'Enter phone number (e.g. 0802 123 4567)',
+            hintText: 'Enter 11-digit number (e.g. 0802 123 4567)',
             prefixIcon: Icon(Icons.phone_android),
           ),
         ),
-        _detectedNetworkBadge(_dataOperatorName, _dataOperatorIcon),
+        _networkStatusBadge(
+          name: _dataOperatorName,
+          icon: _dataOperatorIcon,
+          verified: _dataVerified,
+          ported: _dataPorted,
+          detecting: _dataDetecting,
+          message: _dataDetectMsg,
+          onChangeNetwork: () => _pickNetworkManually(
+            onPicked: (code, name, icon) {
+              final changed = _dataOperator != code;
+              setState(() {
+                _dataOperator = code;
+                _dataOperatorName = name;
+                _dataOperatorIcon = icon;
+                _dataVerified = true;
+                _dataPorted = false;
+                _dataDetectMsg = 'Network confirmed manually by you.';
+              });
+              if (changed) _loadPlans(code);
+            },
+          ),
+        ),
       ]),
       if (_dataOperator != null)
         _card(isDark, [
@@ -979,12 +1107,11 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                   ),
                 ),
                 child: Row(children: [
-                  Text('${p['allowance']}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text('${p['validity']}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      if ((p['validity'] ?? '').toString().isNotEmpty)
+                        Text('${p['validity']}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ]),
                   ),
                   Text('$_symbol${p['amount']}', style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -1024,7 +1151,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
             ],
           ),
           const SizedBox(height: 6),
-          ..._recentAirtime.take(3).map((tx) {
+          ..._recentAirtime.take(5).map((tx) {
             final reversed = tx['reversed'] == true;
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -1035,7 +1162,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.phone_in_talk, color: PayNoraColors.brandSecondary, size: 20),
+                  const Icon(Icons.receipt_long, color: PayNoraColors.brandSecondary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -1111,24 +1238,43 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
               _a2cOperator = null;
               _a2cOperatorName = null;
               _a2cOperatorIcon = null;
+              _a2cVerified = false;
+              _a2cPorted = null;
+              _a2cDetectMsg = null;
             });
             _onA2CPhoneChanged(_a2cPhone.text);
           },
         ),
         const SizedBox(height: 14),
-        _label(_a2cCategory == 'ELECTRICITY'
-            ? 'METER NUMBER (AUTO-DETECTS ELECTRICITY COMPANY)'
-            : 'PHONE NUMBER (AUTO-DETECTS NETWORK)'),
+        _label(_a2cCategory == 'ELECTRICITY' ? 'NIGERIAN METER NUMBER' : 'NIGERIAN PHONE NUMBER'),
         TextField(
           controller: _a2cPhone,
           keyboardType: TextInputType.number,
           onChanged: _onA2CPhoneChanged,
           decoration: InputDecoration(
-            hintText: _a2cCategory == 'ELECTRICITY' ? '45012345678' : '0802 000 0000',
+            hintText: _a2cCategory == 'ELECTRICITY' ? 'Enter 11-digit meter number' : '0802 000 0000',
             prefixIcon: Icon(_a2cCategory == 'ELECTRICITY' ? Icons.electric_meter_outlined : Icons.sim_card_outlined),
           ),
         ),
-        _detectedNetworkBadge(_a2cOperatorName, _a2cOperatorIcon),
+        if (_a2cCategory != 'ELECTRICITY')
+          _networkStatusBadge(
+            name: _a2cOperatorName,
+            icon: _a2cOperatorIcon,
+            verified: _a2cVerified,
+            ported: _a2cPorted,
+            detecting: _a2cDetecting,
+            message: _a2cDetectMsg,
+            onChangeNetwork: () => _pickNetworkManually(
+              onPicked: (code, name, icon) => setState(() {
+                _a2cOperator = code;
+                _a2cOperatorName = name;
+                _a2cOperatorIcon = icon;
+                _a2cVerified = true;
+                _a2cPorted = false;
+                _a2cDetectMsg = 'Network confirmed manually by you.';
+              }),
+            ),
+          ),
         const SizedBox(height: 18),
         _label('$_a2cCategory AMOUNT TO CONVERT'),
         TextField(
@@ -1142,7 +1288,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: (_currency == 'NGN' ? ['500', '1000', '2000', '5000', '10000'] : ['10', '20', '50', '100'])
+          children: ['500', '1000', '2000', '5000', '10000']
               .map((a) => ActionChip(label: Text('$_symbol$a'), onPressed: () => setState(() => _a2cAmount.text = a)))
               .toList(),
         ),
@@ -1158,7 +1304,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Airtime Value', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('Value', style: TextStyle(fontSize: 12, color: Colors.grey)),
                   Text('$_symbol${amt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w700)),
                 ],
               ),
@@ -1200,9 +1346,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   }
 
   Widget _electricityTab(bool isDark) {
-    final quickAmounts = _currency == 'NGN'
-        ? ['1000', '2000', '5000', '10000', '20000']
-        : ['10', '25', '50', '100', '200'];
+    final quickAmounts = ['1000', '2000', '5000', '10000', '20000'];
 
     return ListView(padding: const EdgeInsets.all(20), children: [
       _card(isDark, [
@@ -1213,19 +1357,27 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
             ButtonSegment(value: 'POSTPAID', label: Text('Postpaid'), icon: Icon(Icons.receipt_long)),
           ],
           selected: {_meterType},
-          onSelectionChanged: (s) => setState(() {
-            _meterType = s.first;
-            _meterInfo = null;
-          }),
+          onSelectionChanged: (s) {
+            setState(() {
+              _meterType = s.first;
+              _meterInfo = null;
+              _disco = null;
+              _discoName = null;
+              _meterError = null;
+            });
+            if (_meterNo.text.replaceAll(RegExp(r'\D'), '').length >= 10) {
+              _validateMeter();
+            }
+          },
         ),
         const SizedBox(height: 18),
-        _label('METER NUMBER (AUTO-DETECTS ELECTRICITY COMPANY)'),
+        _label('NIGERIAN METER NUMBER (LIVE UTILITY VERIFICATION)'),
         TextField(
           controller: _meterNo,
           keyboardType: TextInputType.number,
           onChanged: _onMeterChanged,
           decoration: InputDecoration(
-            hintText: 'Enter meter number (e.g. 45012345678)',
+            hintText: 'Enter 10–13 digit meter number',
             prefixIcon: const Icon(Icons.electric_meter_outlined),
             suffixIcon: _validating
                 ? const Padding(
@@ -1238,7 +1390,58 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                   ),
           ),
         ),
-        _detectedNetworkBadge(_discoName, '⚡'),
+        if (_discos.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String?>(
+            value: _manualDisco,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Electricity Company (Auto-detected, or choose)',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('Auto-Detect Live from Meter')),
+              ..._discos.map((d) => DropdownMenuItem<String?>(
+                    value: '${d['code']}',
+                    child: Text('${d['name']}'),
+                  )),
+            ],
+            onChanged: (val) {
+              setState(() => _manualDisco = val);
+              if (_meterNo.text.replaceAll(RegExp(r'\D'), '').length >= 10) {
+                _validateMeter();
+              }
+            },
+          ),
+        ],
+        if (_validating)
+          const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              'Verifying meter live across Nigerian electricity distribution companies...',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+        if (_meterError != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.withOpacity(0.4)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(_meterError!, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (_meterInfo != null) ...[
           const SizedBox(height: 12),
           Container(
@@ -1246,15 +1449,20 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
             decoration: BoxDecoration(
               color: PayNoraColors.success.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: PayNoraColors.success.withOpacity(0.4)),
             ),
             child: Row(children: [
               const Icon(Icons.verified_user, color: PayNoraColors.success),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Company: ${_discoName ?? _disco ?? ''}',
+                      style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.success, fontSize: 13)),
+                  const SizedBox(height: 2),
                   Text('Meter Owner: ${_meterInfo!['customer_name']}',
-                      style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.success)),
-                  Text('${_meterInfo!['address'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  if ((_meterInfo!['address'] ?? '').toString().isNotEmpty)
+                    Text('${_meterInfo!['address']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ]),
               ),
             ]),
@@ -1262,7 +1470,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
       ]),
       _card(isDark, [
-        _label('AMOUNT ($_currency)'),
+        _label('AMOUNT (NGN)'),
         TextField(
           controller: _powerAmount,
           keyboardType: TextInputType.number,
