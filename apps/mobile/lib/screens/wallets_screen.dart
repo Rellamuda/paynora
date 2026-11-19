@@ -43,11 +43,10 @@ class _WalletsScreenState extends State<WalletsScreen> {
       final res = await _api.getWallets();
       setState(() {
         _wallets = res.isNotEmpty
-            ? res
+            ? res.take(2).toList()
             : [
                 {'currency': 'NGN', 'available_balance': '12500000.00'},
                 {'currency': 'USD', 'available_balance': '5800.00'},
-                {'currency': 'GBP', 'available_balance': '3200.00'},
               ];
         _loading = false;
       });
@@ -56,7 +55,6 @@ class _WalletsScreenState extends State<WalletsScreen> {
         _wallets = [
           {'currency': 'NGN', 'available_balance': '12500000.00'},
           {'currency': 'USD', 'available_balance': '5800.00'},
-          {'currency': 'GBP', 'available_balance': '3200.00'},
         ];
         _loading = false;
       });

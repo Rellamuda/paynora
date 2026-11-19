@@ -33,19 +33,56 @@ class _LoginScreenState extends State<LoginScreen> {
   final _signUpPassCtrl = TextEditingController();
   bool _obscureSignUpPass = true;
 
-  // Country selection for registration
+  // Global Country of Residence selection for registration (Strictly 2 Wallets: Local + USD, or USD + GBP for US)
   final List<Map<String, String>> _countries = [
     {'code': 'NG', 'name': 'Nigeria', 'flag': '🇳🇬', 'curr': 'NGN', 'dial': '+234'},
     {'code': 'GB', 'name': 'United Kingdom', 'flag': '🇬🇧', 'curr': 'GBP', 'dial': '+44'},
     {'code': 'US', 'name': 'United States', 'flag': '🇺🇸', 'curr': 'USD', 'dial': '+1'},
     {'code': 'CA', 'name': 'Canada', 'flag': '🇨🇦', 'curr': 'CAD', 'dial': '+1'},
-    {'code': 'AE', 'name': 'United Arab Emirates', 'flag': '🇦🇪', 'curr': 'AED', 'dial': '+971'},
     {'code': 'GH', 'name': 'Ghana', 'flag': '🇬🇭', 'curr': 'GHS', 'dial': '+233'},
+    {'code': 'KE', 'name': 'Kenya', 'flag': '🇰🇪', 'curr': 'KES', 'dial': '+254'},
     {'code': 'ZA', 'name': 'South Africa', 'flag': '🇿🇦', 'curr': 'ZAR', 'dial': '+27'},
+    {'code': 'AE', 'name': 'United Arab Emirates', 'flag': '🇦🇪', 'curr': 'AED', 'dial': '+971'},
     {'code': 'DE', 'name': 'Germany', 'flag': '🇩🇪', 'curr': 'EUR', 'dial': '+49'},
     {'code': 'FR', 'name': 'France', 'flag': '🇫🇷', 'curr': 'EUR', 'dial': '+33'},
+    {'code': 'IT', 'name': 'Italy', 'flag': '🇮🇹', 'curr': 'EUR', 'dial': '+39'},
+    {'code': 'ES', 'name': 'Spain', 'flag': '🇪🇸', 'curr': 'EUR', 'dial': '+34'},
+    {'code': 'NL', 'name': 'Netherlands', 'flag': '🇳🇱', 'curr': 'EUR', 'dial': '+31'},
+    {'code': 'IE', 'name': 'Ireland', 'flag': '🇮🇪', 'curr': 'EUR', 'dial': '+353'},
+    {'code': 'CH', 'name': 'Switzerland', 'flag': '🇨🇭', 'curr': 'CHF', 'dial': '+41'},
+    {'code': 'SE', 'name': 'Sweden', 'flag': '🇸🇪', 'curr': 'SEK', 'dial': '+46'},
+    {'code': 'NO', 'name': 'Norway', 'flag': '🇳🇴', 'curr': 'NOK', 'dial': '+47'},
+    {'code': 'PL', 'name': 'Poland', 'flag': '🇵🇱', 'curr': 'PLN', 'dial': '+48'},
     {'code': 'SA', 'name': 'Saudi Arabia', 'flag': '🇸🇦', 'curr': 'SAR', 'dial': '+966'},
+    {'code': 'QA', 'name': 'Qatar', 'flag': '🇶🇦', 'curr': 'QAR', 'dial': '+974'},
+    {'code': 'KW', 'name': 'Kuwait', 'flag': '🇰🇼', 'curr': 'KWD', 'dial': '+965'},
+    {'code': 'EG', 'name': 'Egypt', 'flag': '🇪🇬', 'curr': 'EGP', 'dial': '+20'},
+    {'code': 'MA', 'name': 'Morocco', 'flag': '🇲🇦', 'curr': 'MAD', 'dial': '+212'},
+    {'code': 'RW', 'name': 'Rwanda', 'flag': '🇷🇼', 'curr': 'RWF', 'dial': '+250'},
+    {'code': 'TZ', 'name': 'Tanzania', 'flag': '🇹🇿', 'curr': 'TZS', 'dial': '+255'},
+    {'code': 'UG', 'name': 'Uganda', 'flag': '🇺🇬', 'curr': 'UGX', 'dial': '+256'},
+    {'code': 'SN', 'name': 'Senegal', 'flag': '🇸🇳', 'curr': 'XOF', 'dial': '+221'},
+    {'code': 'CI', 'name': 'Côte d’Ivoire', 'flag': '🇨🇮', 'curr': 'XOF', 'dial': '+225'},
+    {'code': 'CM', 'name': 'Cameroon', 'flag': '🇨🇲', 'curr': 'XAF', 'dial': '+237'},
+    {'code': 'ZM', 'name': 'Zambia', 'flag': '🇿🇲', 'curr': 'ZMW', 'dial': '+260'},
+    {'code': 'IN', 'name': 'India', 'flag': '🇮🇳', 'curr': 'INR', 'dial': '+91'},
     {'code': 'CN', 'name': 'China', 'flag': '🇨🇳', 'curr': 'CNY', 'dial': '+86'},
+    {'code': 'JP', 'name': 'Japan', 'flag': '🇯🇵', 'curr': 'JPY', 'dial': '+81'},
+    {'code': 'KR', 'name': 'South Korea', 'flag': '🇰🇷', 'curr': 'KRW', 'dial': '+82'},
+    {'code': 'SG', 'name': 'Singapore', 'flag': '🇸🇬', 'curr': 'SGD', 'dial': '+65'},
+    {'code': 'MY', 'name': 'Malaysia', 'flag': '🇲🇾', 'curr': 'MYR', 'dial': '+60'},
+    {'code': 'PH', 'name': 'Philippines', 'flag': '🇵🇭', 'curr': 'PHP', 'dial': '+63'},
+    {'code': 'ID', 'name': 'Indonesia', 'flag': '🇮🇩', 'curr': 'IDR', 'dial': '+62'},
+    {'code': 'PK', 'name': 'Pakistan', 'flag': '🇵🇰', 'curr': 'PKR', 'dial': '+92'},
+    {'code': 'BD', 'name': 'Bangladesh', 'flag': '🇧🇩', 'curr': 'BDT', 'dial': '+880'},
+    {'code': 'AU', 'name': 'Australia', 'flag': '🇦🇺', 'curr': 'AUD', 'dial': '+61'},
+    {'code': 'NZ', 'name': 'New Zealand', 'flag': '🇳🇿', 'curr': 'NZD', 'dial': '+64'},
+    {'code': 'BR', 'name': 'Brazil', 'flag': '🇧🇷', 'curr': 'BRL', 'dial': '+55'},
+    {'code': 'MX', 'name': 'Mexico', 'flag': '🇲🇽', 'curr': 'MXN', 'dial': '+52'},
+    {'code': 'CO', 'name': 'Colombia', 'flag': '🇨🇴', 'curr': 'COP', 'dial': '+57'},
+    {'code': 'AR', 'name': 'Argentina', 'flag': '🇦🇷', 'curr': 'ARS', 'dial': '+54'},
+    {'code': 'CL', 'name': 'Chile', 'flag': '🇨🇱', 'curr': 'CLP', 'dial': '+56'},
+    {'code': 'TR', 'name': 'Turkey', 'flag': '🇹🇷', 'curr': 'TRY', 'dial': '+90'},
   ];
   late Map<String, String> _selectedCountry;
 
@@ -667,7 +704,15 @@ class _LoginScreenState extends State<LoginScreen> {
             if (val != null) setState(() => _selectedCountry = val);
           },
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '✓ Provisioned Wallets: ${_selectedCountry['curr']} (Local) + ${_selectedCountry['curr'] == 'USD' ? 'GBP' : 'USD'} (Foreign)',
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: PayNoraColors.brandSecondary),
+          ),
+        ),
+        const SizedBox(height: 12),
 
         // Phone with Dial Code Prefix
         TextField(

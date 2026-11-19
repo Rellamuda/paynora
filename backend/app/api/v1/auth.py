@@ -32,6 +32,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
         user = {
             "user_id": sub or "usr_demo_customer",
             "email": payload.get("email", "customer@paynora.com") if payload else "customer@paynora.com",
+            "country_iso": (payload.get("country_iso", "NG") if payload else "NG").upper(),
             "first_name": "PayNora",
             "last_name": "Customer",
             "roles": ["CUSTOMER"],
@@ -75,7 +76,12 @@ def login(payload: UserLoginRequest):
             detail="Invalid email address or password."
         )
 
-    access_token = create_access_token(data={"sub": user["user_id"], "email": user["email"], "roles": user["roles"]})
+    access_token = create_access_token(data={
+        "sub": user["user_id"],
+        "email": user["email"],
+        "country_iso": user.get("country_iso", "NG"),
+        "roles": user["roles"]
+    })
     return {
         "access_token": access_token,
         "token_type": "bearer",

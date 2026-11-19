@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from app.api.v1.auth import get_current_user
 from app.auth.store import USERS_DB
 from app.config import settings
-from app.wallets.models import WalletEngine, resolve_local_currency, DEFAULT_FOREIGN_CURRENCIES
+from app.wallets.models import WalletEngine, resolve_local_currency, resolve_foreign_currency, DEFAULT_FOREIGN_CURRENCIES
 
 router = APIRouter(prefix="/p2p", tags=["App-to-App Transfers"])
 
@@ -125,13 +125,13 @@ def _q2(x: Decimal) -> Decimal:
 
 def _build_quote(src: str, amount: Decimal, recipient: Dict[str, Any], receive_mode: str) -> Dict[str, Any]:
     recipient_local = resolve_local_currency(recipient["user_id"])
+    recipient_foreign = resolve_foreign_currency(recipient_local)
     if receive_mode == "LOCAL":
         dst = recipient_local
     else:
-        # Recipient keeps the sent currency when they hold that wallet (USD / GBP / their local),
-        # otherwise it lands in their USD wallet.
-        held = {recipient_local, *DEFAULT_FOREIGN_CURRENCIES}
-        dst = src if src in held else "USD"
+        # Recipient has strictly 2 wallets: their Local Currency + their Foreign Currency (USD, or GBP for US users).
+        held = {recipient_local, recipient_foreign}
+        dst = src if src in held else recipient_foreign
 
     if src == dst:
         fee = Decimal("0.00")

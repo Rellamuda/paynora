@@ -30,10 +30,9 @@ class _SendScreenState extends State<SendScreen> {
   // Only applicable to P2P: 'LOCAL' (recipient's local currency) or 'ORIGINAL' (keep USD/GBP)
   String _recipientMode = 'LOCAL';
 
-  // Wallet balances loaded from backend
+  // Strictly 2 Wallets loaded from backend (Local + USD, or USD + GBP for US residents)
   Map<String, String> _walletBalances = {
     'USD': '1250.00',
-    'GBP': '800.00',
     'NGN': '500000.00',
   };
 
@@ -126,10 +125,12 @@ class _SendScreenState extends State<SendScreen> {
             map[c] = (w['available_balance'] ?? '0.00').toString();
           }
         }
-        // Ensure default foreign currencies USD & GBP are always selectable
-        map.putIfAbsent('USD', () => '0.00');
-        map.putIfAbsent('GBP', () => '0.00');
-        setState(() => _walletBalances = map);
+        setState(() {
+          _walletBalances = map;
+          if (!map.containsKey(_sourceCurrency) && map.isNotEmpty) {
+            _sourceCurrency = map.containsKey('USD') ? 'USD' : map.keys.first;
+          }
+        });
       }
     } catch (_) {}
   }
@@ -451,7 +452,7 @@ class _SendScreenState extends State<SendScreen> {
       return _buildSuccessScreen(isDark);
     }
 
-    final currencyOptions = <String>{'USD', 'GBP', ..._walletBalances.keys}.toList();
+    final currencyOptions = _walletBalances.keys.toList();
     final currentBal = _walletBalances[_sourceCurrency] ?? '0.00';
 
     return Scaffold(
@@ -888,7 +889,7 @@ class _SendScreenState extends State<SendScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.success),
                         ),
                         Text(
-                          'Country: ${_p2pRecipient!['country_iso']} · Local Wallet: ${_p2pRecipient!['local_currency']} · Foreign Wallets: USD, GBP',
+                          'Country: ${_p2pRecipient!['country_iso']} · Wallets: ${_p2pRecipient!['local_currency']} (Local) & ${_p2pRecipient!['local_currency'] == 'USD' ? 'GBP' : 'USD'} (Foreign)',
                           style: const TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                       ],

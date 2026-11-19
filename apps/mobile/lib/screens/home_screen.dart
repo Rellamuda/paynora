@@ -45,11 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final transfers = await _api.getTransfers();
       setState(() {
         _wallets = wallets.isNotEmpty
-            ? wallets
+            ? wallets.take(2).toList()
             : [
                 {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
                 {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
-                {'currency': 'GBP', 'available_balance': '3200.00', 'symbol': '£'},
               ];
         _transfers = transfers;
         _loading = false;
@@ -59,7 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _wallets = [
           {'currency': 'NGN', 'available_balance': '12500000.00', 'symbol': '₦'},
           {'currency': 'USD', 'available_balance': '5800.00', 'symbol': '\$'},
-          {'currency': 'GBP', 'available_balance': '3200.00', 'symbol': '£'},
         ];
         _loading = false;
       });

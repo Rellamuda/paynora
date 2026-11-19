@@ -24,15 +24,13 @@ async def test_wallet_activation_and_ledger_integrity():
         token = login_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # 2. List Default Wallets (Local NGN + Default Foreign USD & GBP)
+        # 2. List Default Wallets (Strictly 2 wallets: Local NGN + Foreign USD)
         wallets_res = await client.get("/api/v1/wallets", headers=headers)
         assert wallets_res.status_code == 200
         wallets_data = wallets_res.json()
-        assert wallets_data["count"] == 3
+        assert wallets_data["count"] == 2
         currencies = [w["currency"] for w in wallets_data["wallets"]]
-        assert "NGN" in currencies
-        assert "USD" in currencies
-        assert "GBP" in currencies
+        assert currencies == ["NGN", "USD"]
 
         # 3. Activate USD Wallet
         act_res = await client.post("/api/v1/wallets", json={"currency": "USD"}, headers=headers)
