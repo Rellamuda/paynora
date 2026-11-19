@@ -1,9 +1,14 @@
 from decimal import Decimal
 from typing import Dict, Any, List
 import uuid
+from app.storage import load_section, save_section
 
-# In-memory wallet store for local execution
-USER_WALLETS: Dict[str, List[Dict[str, Any]]] = {}
+# Persistent wallet store (survives container rebuilds & server restarts)
+USER_WALLETS: Dict[str, List[Dict[str, Any]]] = load_section("user_wallets", {})
+
+
+def persist_wallets_db() -> None:
+    save_section("user_wallets", USER_WALLETS)
 
 # Default foreign currency options (USD primary; GBP when local currency is already USD)
 DEFAULT_FOREIGN_CURRENCIES = ["USD", "GBP"]
@@ -44,6 +49,7 @@ COUNTRY_LOCAL_CURRENCY: Dict[str, str] = {
 }
 
 DEMO_SEED_BALANCES = {"NGN": "500000.00", "USD": "1250.00", "GBP": "800.00"}
+REVIEWER_USER_ID = "usr_store_reviewer"
 
 
 def resolve_local_currency(user_id: str) -> str:
@@ -81,13 +87,14 @@ class WalletEngine:
         currencies = [local_curr, foreign_curr]
         allowed = set(currencies)
 
+        is_reviewer = user_id == REVIEWER_USER_ID
         if user_id not in USER_WALLETS:
             USER_WALLETS[user_id] = [
                 {
                     "wallet_id": f"wlt_{uuid.uuid4().hex[:10]}",
                     "user_id": user_id,
                     "currency": curr,
-                    "available_balance": DEMO_SEED_BALANCES.get(curr, "2500.00"),
+                    "available_balance": DEMO_SEED_BALANCES.get(curr, "2500.00") if is_reviewer else "0.00",
                     "pending_balance": "0.00",
                     "status": "ACTIVE",
                     "is_local": curr == local_curr,
@@ -96,23 +103,28 @@ class WalletEngine:
                 }
                 for curr in currencies
             ]
+            persist_wallets_db()
         else:
             # Strictly enforce the 2-wallet invariant: Local + Foreign (USD, or GBP for US users)
             USER_WALLETS[user_id] = [w for w in USER_WALLETS[user_id] if w["currency"] in allowed]
             existing = {w["currency"] for w in USER_WALLETS[user_id]}
+            changed = False
             for curr in currencies:
                 if curr not in existing:
                     USER_WALLETS[user_id].append({
                         "wallet_id": f"wlt_{uuid.uuid4().hex[:10]}",
                         "user_id": user_id,
                         "currency": curr,
-                        "available_balance": DEMO_SEED_BALANCES.get(curr, "0.00"),
+                        "available_balance": DEMO_SEED_BALANCES.get(curr, "0.00") if is_reviewer else "0.00",
                         "pending_balance": "0.00",
                         "status": "ACTIVE",
                         "is_local": curr == local_curr,
                         "wallet_role": "LOCAL" if curr == local_curr else "FOREIGN",
                         "created_at": "2026-10-04T11:40:00Z"
                     })
+                    changed = True
+            if changed:
+                persist_wallets_db()
         return USER_WALLETS[user_id]
 
     @staticmethod
@@ -154,6 +166,7 @@ class WalletEngine:
 
         current_bal = Decimal(target_wallet["available_balance"])
         target_wallet["available_balance"] = f"{(current_bal + add_amount):.2f}"
+        persist_wallets_db()
         return target_wallet
 
     @staticmethod
@@ -190,6 +203,7 @@ class WalletEngine:
 
         source_wallet["available_balance"] = f"{(Decimal(source_wallet['available_balance']) - f_amt):.2f}"
         dest_wallet["available_balance"] = f"{(Decimal(dest_wallet['available_balance']) + t_amt):.2f}"
+        persist_wallets_db()
 
         return {
             "source_wallet": source_wallet,

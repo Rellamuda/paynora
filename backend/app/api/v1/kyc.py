@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from app.api.v1.auth import get_current_user
+from app.auth.store import persist_users_db
 from app.kyc.state_machine import KYCState, KYCStateMachine
 from app.kyc.capabilities import AccountCapabilityPolicy
 from app.providers.kyc import MockKYCProvider
@@ -55,6 +56,7 @@ def submit_identity_verification(
     current_user["kyc_status"] = new_state
     new_capabilities = AccountCapabilityPolicy.get_capabilities_for_state(new_state)
     current_user["account_capabilities"] = new_capabilities
+    persist_users_db()
 
     event_publisher.publish_event("KYCCompleted", {
         "user_id": user_id,

@@ -20,9 +20,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.api.v1.auth import get_current_user
-from app.auth.store import USERS_DB
+from app.auth.store import USERS_DB, persist_users_db
 from app.config import settings
-from app.wallets.models import WalletEngine, resolve_local_currency, resolve_foreign_currency, DEFAULT_FOREIGN_CURRENCIES
+from app.wallets.models import WalletEngine, resolve_local_currency, resolve_foreign_currency, DEFAULT_FOREIGN_CURRENCIES, persist_wallets_db
+from app.storage import load_section, save_section
 
 router = APIRouter(prefix="/p2p", tags=["App-to-App Transfers"])
 
@@ -43,8 +44,12 @@ P2P_FEE_RATE = Decimal("0.003")      # 0.3% FX margin only when currency changes
 P2P_MAX_SINGLE = Decimal("10000")    # USD-equivalent cap per transfer (pre-KYC tier guard)
 
 _LEDGER_LOCK = threading.Lock()
-P2P_TRANSFERS: List[Dict[str, Any]] = []
+P2P_TRANSFERS: List[Dict[str, Any]] = load_section("p2p_transfers", [])
 P2P_IDEMPOTENCY: Dict[str, Dict[str, Any]] = {}
+
+
+def persist_p2p_db() -> None:
+    save_section("p2p_transfers", P2P_TRANSFERS)
 
 # ---------------------------------------------------------------------------
 # Demo directory (development only) so lookups work on a fresh in-memory DB.
@@ -63,6 +68,7 @@ _DEMO_USERS = [
 
 
 def _seed_demo_directory() -> None:
+    changed = False
     for u in _DEMO_USERS:
         if u["user_id"] not in USERS_DB:
             USERS_DB[u["user_id"]] = {
@@ -74,6 +80,9 @@ def _seed_demo_directory() -> None:
                 "account_capabilities": ["VIEW_ACCOUNT", "SEND_MONEY", "RECEIVE_MONEY"],
                 "created_at": "2026-10-04T11:35:00Z",
             }
+            changed = True
+    if changed:
+        persist_users_db()
 
 
 _seed_demo_directory()
@@ -266,6 +275,7 @@ def p2p_transfer(
 
         sender_wallet["available_balance"] = f"{Decimal(sender_wallet['available_balance']) - amount:.2f}"
         recipient_wallet["available_balance"] = f"{Decimal(recipient_wallet['available_balance']) + receive_amount:.2f}"
+        persist_wallets_db()
 
     record = {
         "transfer_id": f"p2p_{uuid.uuid4().hex[:12]}",
@@ -280,6 +290,7 @@ def p2p_transfer(
     }
     P2P_TRANSFERS.insert(0, record)
     P2P_IDEMPOTENCY[cache_key] = record
+    persist_p2p_db()
 
     try:
         from app.notifications.service import NotificationService

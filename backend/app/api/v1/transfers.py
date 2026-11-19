@@ -9,8 +9,9 @@ from app.events.kafka import event_publisher
 from app.notifications.service import NotificationService
 from app.receipts.generator import ReceiptGenerator
 from app.api.v1.auth import get_current_user
-from app.wallets.models import WalletEngine
+from app.wallets.models import WalletEngine, persist_wallets_db
 from app.fx.engine import FXEngine
+from app.storage import load_section, save_section
 
 router = APIRouter(prefix="/transfers", tags=["Transfers"])
 
@@ -44,35 +45,13 @@ class DisbursePayoutRequest(BaseModel):
     recipient_name: str
     narration: str | None = None
 
-# In-memory transfer store for local development
-TRANSFERS_LIST = [
-    {
-        "transfer_id": "trf_08d31befd3c1",
-        "idempotency_key": "seed_01",
-        "source_currency": "NGN",
-        "source_amount": "100000.00",
-        "recipient_name": "Mike Okafor",
-        "source_country": "NG",
-        "destination_country": "GB",
-        "recipient_currency_mode": "CHOICE",
-        "state": TransferState.COMPLETED,
-        "estimated_fee": "500.00",
-        "created_at": "2026-10-04T18:30:00Z"
-    },
-    {
-        "transfer_id": "trf_a912fc89d02e",
-        "idempotency_key": "seed_02",
-        "source_currency": "GBP",
-        "source_amount": "250.00",
-        "recipient_name": "John Doe",
-        "source_country": "GB",
-        "destination_country": "NG",
-        "recipient_currency_mode": "CHOICE",
-        "state": TransferState.COMPLETED,
-        "estimated_fee": "3.50",
-        "created_at": "2026-10-04T14:15:00Z"
-    }
-]
+# Persistent transfer store (zero dummy transfers for new accounts)
+TRANSFERS_LIST: List[Dict[str, Any]] = load_section("transfers_list", [])
+
+
+def persist_transfers_db() -> None:
+    save_section("transfers_list", TRANSFERS_LIST)
+
 
 IDEMPOTENCY_CACHE = {}
 
@@ -101,11 +80,16 @@ async def resolve_bank_account(payload: ResolveAccountRequest):
     return result
 
 @router.get("")
-def list_transfers():
-    """List all recent cross-border transfers and ledger states."""
+def list_transfers(current_user: dict = Depends(get_current_user)):
+    """List recent cross-border transfers and ledger states for the authenticated user."""
+    user_id = current_user.get("user_id")
+    user_transfers = [
+        tx for tx in TRANSFERS_LIST
+        if tx.get("user_id") == user_id or tx.get("sender_user_id") == user_id or tx.get("recipient_user_id") == user_id
+    ]
     return {
-        "transfers": TRANSFERS_LIST,
-        "count": len(TRANSFERS_LIST)
+        "transfers": user_transfers,
+        "count": len(user_transfers)
     }
 
 @router.get("/{transfer_id}")
@@ -213,6 +197,7 @@ async def create_transfer(
 
     response_data = {
         "transfer_id": transfer_id,
+        "user_id": user_id,
         "idempotency_key": idempotency_key,
         "source_currency": src_curr,
         "source_amount": str(amount),
@@ -234,6 +219,9 @@ async def create_transfer(
 
     IDEMPOTENCY_CACHE[idempotency_key] = response_data
     TRANSFERS_LIST.insert(0, response_data)
+    persist_transfers_db()
+    if debited:
+        persist_wallets_db()
     event_publisher.publish_event("TransferCreated", response_data)
 
     # Dispatch notification alert

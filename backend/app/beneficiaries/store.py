@@ -1,27 +1,20 @@
 from typing import Dict, List, Any, Optional
 import uuid
+from app.storage import load_section, save_section
 
-BENEFICIARIES_DB: Dict[str, List[Dict[str, Any]]] = {}
+BENEFICIARIES_DB: Dict[str, List[Dict[str, Any]]] = load_section("beneficiaries_db", {})
+
+
+def persist_beneficiaries_db() -> None:
+    save_section("beneficiaries_db", BENEFICIARIES_DB)
+
 
 class BeneficiaryStore:
     @staticmethod
     def get_user_beneficiaries(user_id: str) -> List[Dict[str, Any]]:
         if user_id not in BENEFICIARIES_DB:
-            BENEFICIARIES_DB[user_id] = [
-                {
-                    "beneficiary_id": "ben_john_123",
-                    "user_id": user_id,
-                    "name": "John Doe",
-                    "email": "john.london@example.com",
-                    "country_iso": "GB",
-                    "currency": "GBP",
-                    "account_details": {
-                        "sort_code": "10-20-30",
-                        "account_number": "87654321"
-                    },
-                    "created_at": "2026-10-04T11:40:00Z"
-                }
-            ]
+            BENEFICIARIES_DB[user_id] = []
+            persist_beneficiaries_db()
         return BENEFICIARIES_DB[user_id]
 
     @staticmethod
@@ -44,4 +37,5 @@ class BeneficiaryStore:
             "created_at": "2026-10-04T11:41:00Z"
         }
         beneficiaries.append(new_ben)
+        persist_beneficiaries_db()
         return new_ben

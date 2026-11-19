@@ -80,12 +80,12 @@ class _RecipientsScreenState extends State<RecipientsScreen> {
     try {
       final res = await _api.getBeneficiaries();
       setState(() {
-        _beneficiaries = res.isNotEmpty ? res : _mockBeneficiaries;
+        _beneficiaries = res;
         _loading = false;
       });
     } catch (e) {
       setState(() {
-        _beneficiaries = _mockBeneficiaries;
+        _beneficiaries = [];
         _loading = false;
       });
     }

@@ -7,7 +7,8 @@ import random
 import re
 import httpx
 from app.api.v1.auth import get_current_user
-from app.wallets.models import WalletEngine, resolve_local_currency, COUNTRY_LOCAL_CURRENCY
+from app.wallets.models import WalletEngine, resolve_local_currency, COUNTRY_LOCAL_CURRENCY, persist_wallets_db
+from app.storage import load_section, save_section
 from app.config import settings
 
 router = APIRouter(prefix="/bills", tags=["Bills & Utilities"])
@@ -306,8 +307,12 @@ class AirtimeToCashRequest(BaseModel):
     country_iso: str = "NG"
 
 
-AIRTIME_TRANSACTIONS: Dict[str, Dict[str, Any]] = {}
+AIRTIME_TRANSACTIONS: Dict[str, Dict[str, Any]] = load_section("bills_transactions", {})
 AIRTIME_TO_CASH_PAYOUT_RATE = Decimal("0.90")  # 90% cash payout (10% conversion fee)
+
+
+def persist_bills_db() -> None:
+    save_section("bills_transactions", AIRTIME_TRANSACTIONS)
 
 
 def _debit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
@@ -320,6 +325,7 @@ def _debit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
     if current_bal < amount:
         raise HTTPException(status_code=400, detail=f"Insufficient {local_wallet['currency']} wallet balance.")
     local_wallet["available_balance"] = f"{(current_bal - amount):.2f}"
+    persist_wallets_db()
     return local_wallet
 
 
@@ -331,6 +337,7 @@ def _credit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="Local currency wallet not found.")
     current_bal = Decimal(local_wallet["available_balance"])
     local_wallet["available_balance"] = f"{(current_bal + amount):.2f}"
+    persist_wallets_db()
     return local_wallet
 
 
@@ -477,6 +484,7 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
         "message": f"Airtime recharge of {local_wallet['currency']} {amount:.2f} ({op_code}) to {payload.phone_number} delivered instantly."
     }
     AIRTIME_TRANSACTIONS[tx_id] = record
+    persist_bills_db()
     return record
 
 
@@ -518,6 +526,7 @@ async def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user:
         "message": f"Data bundle ({op_code}) activated on {payload.phone_number} instantly."
     }
     AIRTIME_TRANSACTIONS[tx_id] = record
+    persist_bills_db()
     return record
 
 
@@ -575,6 +584,7 @@ async def purchase_electricity(payload: ElectricityPaymentRequest, current_user:
         "message": f"Electricity recharge of {local_wallet['currency']} {amount:.2f} ({detected['disco_name']}) generated. Token: {token_formatted}"
     }
     AIRTIME_TRANSACTIONS[tx_id] = record
+    persist_bills_db()
     return record
 
 
@@ -601,6 +611,7 @@ def reverse_airtime_purchase(payload: AirtimeReversalRequest, current_user: dict
     tx["reversed"] = True
     tx["reversible"] = False
     tx["status"] = "REVERSED"
+    persist_bills_db()
     cat = tx.get("category", "AIRTIME")
 
     return {

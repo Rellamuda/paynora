@@ -45,14 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final profile = await _api.getUserProfile().catchError((_) => <String, dynamic>{});
       final wallets = await _api.getWallets();
-      final transfers = await _api.getTransfers();
+      final transfers = await _api.getTransfers().catchError((_) => <dynamic>[]);
       setState(() {
         if (profile.isNotEmpty) _profile = profile;
         _wallets = wallets.isNotEmpty
             ? wallets.take(2).toList()
             : [
-                {'currency': 'NGN', 'available_balance': '500000.00', 'symbol': '₦'},
-                {'currency': 'USD', 'available_balance': '1250.00', 'symbol': '\$'},
+                {'currency': 'NGN', 'available_balance': '0.00', 'symbol': '₦'},
+                {'currency': 'USD', 'available_balance': '0.00', 'symbol': '\$'},
               ];
         _transfers = transfers;
         _loading = false;
@@ -60,9 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       setState(() {
         _wallets = [
-          {'currency': 'NGN', 'available_balance': '500000.00', 'symbol': '₦'},
-          {'currency': 'USD', 'available_balance': '1250.00', 'symbol': '\$'},
+          {'currency': 'NGN', 'available_balance': '0.00', 'symbol': '₦'},
+          {'currency': 'USD', 'available_balance': '0.00', 'symbol': '\$'},
         ];
+        _transfers = [];
         _loading = false;
       });
     }
@@ -575,7 +576,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
 
                   // Recent Transactions List
-                  ..._transfers.map((tx) {
+                  if (_transfers.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: isDark ? PayNoraColors.darkCard : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? PayNoraColors.darkBorder : PayNoraColors.lightBorder),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 32),
+                          SizedBox(height: 8),
+                          Text('No transfers or payments yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                          SizedBox(height: 4),
+                          Text(
+                            'Deposit funds into your Local or USD Wallet to send money, convert currencies, or pay utility bills.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ..._transfers.map((tx) {
                     final curr = tx['source_currency'] ?? 'NGN';
                     final amt = tx['source_amount'] ?? '0.00';
                     final recipient = tx['recipient_name'] ?? 'Recipient';

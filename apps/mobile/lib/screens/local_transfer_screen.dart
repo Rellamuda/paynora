@@ -75,7 +75,7 @@ class _LocalTransferScreenState extends State<LocalTransferScreen> {
         _balance = '${local['available_balance'] ?? '0.00'}';
       }
     } catch (_) {
-      _balance = '500000.00';
+      _balance = '0.00';
     }
     await _loadBanks();
   }

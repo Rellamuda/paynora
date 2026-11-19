@@ -37,7 +37,9 @@ async def test_wallet_activation_and_ledger_integrity():
         assert act_res.status_code == 201
         assert act_res.json()["currency"] == "USD"
 
-        # 4. Verify Double-Entry Accounting Engine for Wallet Funding Transaction
+        # 4. Fund Wallets & Verify Double-Entry Accounting Engine for Wallet Funding Transaction
+        await client.post("/api/v1/wallets/fund", json={"currency": "NGN", "amount": "500000.00"}, headers=headers)
+        await client.post("/api/v1/wallets/fund", json={"currency": "USD", "amount": "1250.00"}, headers=headers)
         sender_account_id = wallets_data["wallets"][0]["wallet_id"]
         settlement_account_id = "acc_settlement_asset_001"
         funding_amount = Decimal("500000.00")

@@ -69,12 +69,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     try {
       final res = await _api.getTransfers();
       setState(() {
-        _transfers = res.isNotEmpty ? res : _mockTransfers;
+        _transfers = res;
         _loading = false;
       });
     } catch (e) {
       setState(() {
-        _transfers = _mockTransfers;
+        _transfers = [];
         _loading = false;
       });
     }

@@ -31,8 +31,8 @@ class _SendScreenState extends State<SendScreen> {
 
   // Strictly 2 Wallets loaded from backend (Local + USD, or USD + GBP for US residents)
   Map<String, String> _walletBalances = {
-    'USD': '1250.00',
-    'NGN': '500000.00',
+    'USD': '0.00',
+    'NGN': '0.00',
   };
 
   // P2P lookup state

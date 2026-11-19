@@ -221,7 +221,8 @@ class ApiService {
   }
 
   Future<List<dynamic>> getTransfers() async {
-    final res = await _dio.get('/transfers');
+    final headers = await _authHeaders();
+    final res = await _dio.get('/transfers', options: Options(headers: headers));
     return res.data['transfers'] ?? [];
   }
 

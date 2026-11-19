@@ -3,10 +3,16 @@ import hashlib
 import re
 import uuid
 from app.auth.security import hash_password, verify_password
+from app.storage import load_section, save_section
 
-# In-memory auth user database for testing and MVP core
-USERS_DB: Dict[str, Dict[str, Any]] = {}
-OTP_STORE: Dict[str, str] = {}
+# Persistent auth user database (survives container rebuilds & server restarts)
+USERS_DB: Dict[str, Dict[str, Any]] = load_section("users_db", {})
+OTP_STORE: Dict[str, str] = load_section("otp_store", {})
+
+
+def persist_users_db() -> None:
+    save_section("users_db", USERS_DB)
+    save_section("otp_store", OTP_STORE)
 
 
 def generate_account_identifiers(email: str, first_name: str, country_iso: str) -> Dict[str, str]:
@@ -74,6 +80,7 @@ class UserStore:
         }
         USERS_DB[user_id] = user_record
         OTP_STORE[email_clean] = "123456"
+        persist_users_db()
         return user_record
 
     @staticmethod
@@ -97,16 +104,19 @@ class UserStore:
             if user:
                 user["is_email_verified"] = True
                 user["is_phone_verified"] = True
+                persist_users_db()
             return True
         return False
 
     @staticmethod
     def delete_user(user_id: str) -> bool:
-        from app.wallets.models import USER_WALLETS
+        from app.wallets.models import USER_WALLETS, persist_wallets_db
         USER_WALLETS.pop(user_id, None)
+        persist_wallets_db()
         removed = USERS_DB.pop(user_id, None)
         if removed and removed.get("email"):
             OTP_STORE.pop(removed["email"], None)
+        persist_users_db()
         return removed is not None
 
 
@@ -140,6 +150,7 @@ def _seed_store_reviewer_account() -> None:
         ],
         "created_at": "2026-10-04T11:35:00Z",
     }
+    persist_users_db()
 
 
 _seed_store_reviewer_account()
