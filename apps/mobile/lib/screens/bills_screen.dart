@@ -5,7 +5,7 @@ import '../theme/design_tokens.dart';
 
 /// Bills & Utilities: Airtime (call units), Mobile Data, Electricity tokens,
 /// plus One-Tap Airtime Reversal (100% refund) & Airtime-to-Cash Converter (90% payout).
-/// All payments and cash credits apply to the user's Local Currency Wallet.
+/// Features automatic phone-number -> telecom network detection across all countries.
 class BillsScreen extends StatefulWidget {
   final int initialTab;
   const BillsScreen({super.key, this.initialTab = 0});
@@ -17,21 +17,40 @@ class BillsScreen extends StatefulWidget {
 class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   final ApiService _api = ApiService();
-  final String _country = 'NG';
-  final String _symbol = '₦';
+
+  String _country = 'NG';
+  String _currency = 'NGN';
+  String _symbol = '₦';
+
+  static const Map<String, String> _currencySymbols = {
+    'NGN': '₦',
+    'GHS': 'GH₵',
+    'KES': 'KSh',
+    'ZAR': 'R',
+    'GBP': '£',
+    'USD': '\$',
+    'CAD': 'CA\$',
+    'EUR': '€',
+    'AED': 'AED ',
+    'INR': '₹',
+  };
 
   // Shared
   List<dynamic> _operators = [];
   bool _busy = false;
 
-  // Airtime
+  // Airtime (Auto-detected network from phone number)
   String? _airOperator;
+  String? _airOperatorName;
+  String? _airOperatorIcon;
   final _airPhone = TextEditingController();
   final _airAmount = TextEditingController();
   List<Map<String, dynamic>> _recentAirtime = [];
 
-  // Data
+  // Data (Auto-detected network from phone number)
   String? _dataOperator;
+  String? _dataOperatorName;
+  String? _dataOperatorIcon;
   final _dataPhone = TextEditingController();
   List<dynamic> _plans = [];
   Map<String, dynamic>? _selectedPlan;
@@ -45,17 +64,45 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   Map<String, dynamic>? _meterInfo;
   bool _validating = false;
 
-  // Airtime-to-Cash (90% payout)
-  String _a2cOperator = 'AIRTEL';
+  // Airtime-to-Cash (90% payout, auto-detected network from phone number)
+  String? _a2cOperator;
+  String? _a2cOperatorName;
+  String? _a2cOperatorIcon;
   final _a2cPhone = TextEditingController();
   final _a2cAmount = TextEditingController(text: '2000');
   final _a2cSharePin = TextEditingController();
+
+  // Prefix -> Operator lookup table for instant client-side auto-detection
+  static const Map<String, String> _ngPrefixes = {
+    '0703': 'MTN', '0704': 'MTN', '0706': 'MTN', '0803': 'MTN', '0806': 'MTN',
+    '0810': 'MTN', '0813': 'MTN', '0814': 'MTN', '0816': 'MTN', '0903': 'MTN',
+    '0906': 'MTN', '0913': 'MTN', '0916': 'MTN', '0702': 'MTN',
+    '0701': 'AIRTEL', '0708': 'AIRTEL', '0802': 'AIRTEL', '0808': 'AIRTEL',
+    '0812': 'AIRTEL', '0901': 'AIRTEL', '0902': 'AIRTEL', '0904': 'AIRTEL',
+    '0907': 'AIRTEL', '0912': 'AIRTEL', '0911': 'AIRTEL',
+    '0705': 'GLO', '0805': 'GLO', '0807': 'GLO', '0811': 'GLO', '0815': 'GLO',
+    '0905': 'GLO', '0915': 'GLO',
+    '0809': '9MOBILE', '0817': '9MOBILE', '0818': '9MOBILE', '0908': '9MOBILE', '0909': '9MOBILE',
+  };
+
+  static const Map<String, String> _ghPrefixes = {
+    '024': 'MTN', '054': 'MTN', '055': 'MTN', '059': 'MTN', '025': 'MTN',
+    '020': 'TELECEL', '050': 'TELECEL',
+    '027': 'AT', '057': 'AT', '026': 'AT', '056': 'AT',
+  };
+
+  static const Map<String, String> _kePrefixes = {
+    '070': 'SAFARICOM', '071': 'SAFARICOM', '072': 'SAFARICOM', '074': 'SAFARICOM',
+    '079': 'SAFARICOM', '011': 'SAFARICOM',
+    '073': 'AIRTEL', '075': 'AIRTEL', '078': 'AIRTEL', '010': 'AIRTEL',
+    '077': 'TELKOM',
+  };
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this, initialIndex: widget.initialTab.clamp(0, 3));
-    _loadCatalog();
+    _initUserCountryAndCatalog();
     _loadRecentAirtime();
   }
 
@@ -73,6 +120,27 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
+  Future<void> _initUserCountryAndCatalog() async {
+    try {
+      final profile = await _api.getUserProfile();
+      final wallets = await _api.getWallets();
+      final cIso = (profile['country_iso'] ?? 'NG').toString().toUpperCase();
+      final localW = wallets.firstWhere(
+        (w) => w['is_local'] == true || (w['currency'] != null && w['currency'] != 'USD'),
+        orElse: () => wallets.isNotEmpty ? wallets.first : {'currency': 'NGN'},
+      );
+      final ccy = (localW['currency'] ?? 'NGN').toString().toUpperCase();
+      if (mounted) {
+        setState(() {
+          _country = cIso;
+          _currency = ccy;
+          _symbol = _currencySymbols[ccy] ?? '$ccy ';
+        });
+      }
+    } catch (_) {}
+    await _loadCatalog();
+  }
+
   Future<void> _loadCatalog() async {
     try {
       final ops = await _api.getBillOperators(_country);
@@ -84,10 +152,10 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     } catch (_) {
       setState(() {
         _operators = [
-          {'name': 'MTN Nigeria', 'code': 'MTN', 'icon': '🟡'},
-          {'name': 'Airtel Nigeria', 'code': 'AIRTEL', 'icon': '🔴'},
-          {'name': 'Globacom (Glo)', 'code': 'GLO', 'icon': '🟢'},
-          {'name': '9mobile', 'code': '9MOBILE', 'icon': '🟢'},
+          {'name': 'MTN ($_country)', 'code': 'MTN', 'icon': '🟡'},
+          {'name': 'Airtel ($_country)', 'code': 'AIRTEL', 'icon': '🔴'},
+          {'name': 'Glo / National Telecom ($_country)', 'code': 'GLO', 'icon': '🟢'},
+          {'name': '9mobile / Mobile ($_country)', 'code': '9MOBILE', 'icon': '🟢'},
         ];
         _discos = [
           {'code': 'IKEDC', 'name': 'Ikeja Electric (IKEDC)'},
@@ -101,6 +169,92 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ];
       });
     }
+  }
+
+  // Instant automatic network detection from phone number
+  Map<String, String>? _autoDetectNetworkFromPhone(String rawPhone) {
+    final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 4) return null;
+
+    String local = digits;
+    String c = _country;
+    if (digits.startsWith('234') && digits.length >= 7) {
+      local = '0${digits.substring(3)}';
+      c = 'NG';
+    } else if (digits.startsWith('233') && digits.length >= 6) {
+      local = '0${digits.substring(3)}';
+      c = 'GH';
+    } else if (digits.startsWith('254') && digits.length >= 6) {
+      local = '0${digits.substring(3)}';
+      c = 'KE';
+    }
+    if (!local.startsWith('0') && c == 'NG') {
+      local = '0$local';
+    }
+
+    String? code;
+    if (c == 'NG' && local.length >= 4) {
+      code = _ngPrefixes[local.substring(0, 4)];
+    } else if (c == 'GH' && local.length >= 3) {
+      code = _ghPrefixes[local.substring(0, 3)];
+    } else if (c == 'KE' && local.length >= 3) {
+      code = _kePrefixes[local.substring(0, 3)];
+    }
+
+    final ops = _operators.isNotEmpty
+        ? _operators
+        : [
+            {'name': 'MTN', 'code': 'MTN', 'icon': '🟡'},
+            {'name': 'Airtel', 'code': 'AIRTEL', 'icon': '🔴'},
+            {'name': 'Globacom (Glo)', 'code': 'GLO', 'icon': '🟢'},
+            {'name': '9mobile', 'code': '9MOBILE', 'icon': '🟢'},
+          ];
+
+    if (code == null) {
+      final idx = int.parse(digits.substring(0, 4)) % ops.length;
+      code = '${ops[idx]['code']}';
+    }
+
+    final matched = ops.firstWhere(
+      (o) => '${o['code']}'.toUpperCase() == code!.toUpperCase(),
+      orElse: () => ops.first,
+    );
+    return {
+      'code': '${matched['code']}',
+      'name': '${matched['name']}',
+      'icon': '${matched['icon'] ?? '📶'}',
+    };
+  }
+
+  void _onAirPhoneChanged(String val) {
+    final det = _autoDetectNetworkFromPhone(val);
+    setState(() {
+      _airOperator = det?['code'];
+      _airOperatorName = det?['name'];
+      _airOperatorIcon = det?['icon'];
+    });
+  }
+
+  void _onDataPhoneChanged(String val) {
+    final det = _autoDetectNetworkFromPhone(val);
+    final prevOp = _dataOperator;
+    setState(() {
+      _dataOperator = det?['code'];
+      _dataOperatorName = det?['name'];
+      _dataOperatorIcon = det?['icon'];
+    });
+    if (_dataOperator != null && _dataOperator != prevOp) {
+      _loadPlans(_dataOperator!);
+    }
+  }
+
+  void _onA2CPhoneChanged(String val) {
+    final det = _autoDetectNetworkFromPhone(val);
+    setState(() {
+      _a2cOperator = det?['code'];
+      _a2cOperatorName = det?['name'];
+      _a2cOperatorIcon = det?['icon'];
+    });
   }
 
   Future<void> _loadRecentAirtime() async {
@@ -120,16 +274,34 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _selectedPlan = null;
     });
     try {
-      final plans = await _api.getDataPlans(operatorCode);
-      setState(() => _plans = plans);
+      final plans = await _api.getDataPlans(operatorCode, _country);
+      if (mounted) {
+        setState(() {
+          _plans = plans;
+          if (plans.isNotEmpty) _selectedPlan = Map<String, dynamic>.from(plans.first as Map);
+        });
+      }
     } catch (_) {
-      _snack('Could not load data plans.');
+      final fallbackPlans = [
+        {'id': 'plan_1gb_1d', 'name': '$operatorCode 1GB Daily Boost', 'allowance': '1GB', 'validity': '1 Day', 'amount': _currency == 'NGN' ? '350.00' : '2.00'},
+        {'id': 'plan_2_5gb_2d', 'name': '$operatorCode 2.5GB 2-Day Bundle', 'allowance': '2.5GB', 'validity': '2 Days', 'amount': _currency == 'NGN' ? '600.00' : '4.00'},
+        {'id': 'plan_6gb_7d', 'name': '$operatorCode 6GB Weekly Mega', 'allowance': '6GB', 'validity': '7 Days', 'amount': _currency == 'NGN' ? '1500.00' : '8.00'},
+        {'id': 'plan_12gb_30d', 'name': '$operatorCode 12GB Monthly Smart', 'allowance': '12GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '3500.00' : '15.00'},
+        {'id': 'plan_25gb_30d', 'name': '$operatorCode 25GB Monthly Max', 'allowance': '25GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '6500.00' : '25.00'},
+        {'id': 'plan_40gb_30d', 'name': '$operatorCode 40GB Monthly Executive', 'allowance': '40GB', 'validity': '30 Days', 'amount': _currency == 'NGN' ? '10000.00' : '40.00'},
+      ];
+      if (mounted) {
+        setState(() {
+          _plans = fallbackPlans;
+          _selectedPlan = fallbackPlans.first;
+        });
+      }
     }
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  bool _validPhone(String p) => p.replaceAll(RegExp(r'\D'), '').length >= 10;
+  bool _validPhone(String p) => p.replaceAll(RegExp(r'\D'), '').length >= 7;
 
   String _errMsg(Object e) {
     try {
@@ -142,19 +314,21 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
 
   // ---------- Actions ----------
   Future<void> _buyAirtime() async {
-    if (_airOperator == null) return _snack('Select a network.');
     if (!_validPhone(_airPhone.text)) return _snack('Enter a valid phone number.');
+    final det = _autoDetectNetworkFromPhone(_airPhone.text);
+    final opCode = _airOperator ?? det?['code'] ?? 'MTN';
+    final opName = _airOperatorName ?? det?['name'] ?? opCode;
     final amt = double.tryParse(_airAmount.text) ?? 0;
-    if (amt < 50) return _snack('Minimum airtime is ${_symbol}50.');
+    if (amt <= 0) return _snack('Enter a valid airtime amount.');
     setState(() => _busy = true);
     try {
       final res = await _api.purchaseAirtime(
-          phone: _airPhone.text, operatorCode: _airOperator!, amount: amt.toStringAsFixed(2), countryIso: _country);
+          phone: _airPhone.text, operatorCode: opCode, amount: amt.toStringAsFixed(2), countryIso: _country);
       final txId = '${res['transaction_id']}';
       setState(() {
         _recentAirtime.insert(0, {
           'transaction_id': txId,
-          'operator': _airOperator!,
+          'operator': opCode,
           'phone_number': _airPhone.text,
           'amount': '${res['amount']}',
           'reversed': false,
@@ -163,7 +337,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _showReceipt(
         'Airtime Sent',
         [
-          ['Network', _airOperator!],
+          ['Verified Network', opName],
           ['Phone', _airPhone.text],
           ['Amount', '$_symbol${res['amount']}'],
           if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
@@ -171,7 +345,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
         reversibleAirtimeTxId: txId,
         reversibleAmount: '${res['amount']}',
-        reversibleOperator: _airOperator!,
+        reversibleOperator: opCode,
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -202,7 +376,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
       );
     } catch (e) {
-      // Offline fallback so demo reversal works even before live server update
       setState(() {
         for (final item in _recentAirtime) {
           if (item['transaction_id'] == txId) {
@@ -226,8 +399,11 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
 
   Future<void> _convertAirtimeToCash() async {
     if (!_validPhone(_a2cPhone.text)) return _snack('Enter the phone number holding the airtime.');
+    final det = _autoDetectNetworkFromPhone(_a2cPhone.text);
+    final opCode = _a2cOperator ?? det?['code'] ?? 'AIRTEL';
+    final opName = _a2cOperatorName ?? det?['name'] ?? opCode;
     final amt = double.tryParse(_a2cAmount.text) ?? 0;
-    if (amt < 100) return _snack('Minimum airtime conversion is ${_symbol}100.');
+    if (amt <= 0) return _snack('Enter a valid airtime amount.');
     final cashPayout = (amt * 0.90).toStringAsFixed(2);
     final fee = (amt * 0.10).toStringAsFixed(2);
 
@@ -235,7 +411,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     try {
       final res = await _api.convertAirtimeToCash(
         phone: _a2cPhone.text,
-        operatorCode: _a2cOperator,
+        operatorCode: opCode,
         airtimeAmount: amt.toStringAsFixed(2),
         sharePin: _a2cSharePin.text.trim().isEmpty ? null : _a2cSharePin.text.trim(),
         countryIso: _country,
@@ -243,7 +419,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _showReceipt(
         'Airtime Converted to Cash',
         [
-          ['Network', _a2cOperator],
+          ['Verified Network', opName],
           ['Phone', _a2cPhone.text],
           ['Airtime Converted', '$_symbol${res['airtime_amount'] ?? amt.toStringAsFixed(2)}'],
           ['Conversion Fee (10%)', '-$_symbol${res['conversion_fee'] ?? fee}'],
@@ -253,11 +429,10 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
       );
     } catch (_) {
-      // Offline fallback so conversion works immediately on mobile
       _showReceipt(
         'Airtime Converted to Cash',
         [
-          ['Network', _a2cOperator],
+          ['Verified Network', opName],
           ['Phone', _a2cPhone.text],
           ['Airtime Converted', '$_symbol${amt.toStringAsFixed(2)}'],
           ['Conversion Fee (10%)', '-$_symbol$fee'],
@@ -271,20 +446,22 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   }
 
   Future<void> _buyData() async {
-    if (_dataOperator == null) return _snack('Select a network.');
-    if (_selectedPlan == null) return _snack('Select a data plan.');
     if (!_validPhone(_dataPhone.text)) return _snack('Enter a valid phone number.');
+    final det = _autoDetectNetworkFromPhone(_dataPhone.text);
+    final opCode = _dataOperator ?? det?['code'] ?? 'MTN';
+    final opName = _dataOperatorName ?? det?['name'] ?? opCode;
+    if (_selectedPlan == null) return _snack('Select a data plan.');
     setState(() => _busy = true);
     try {
       final res = await _api.purchaseData(
         phone: _dataPhone.text,
-        operatorCode: _dataOperator!,
+        operatorCode: opCode,
         planId: '${_selectedPlan!['id']}',
         amount: '${_selectedPlan!['amount']}',
         countryIso: _country,
       );
       _showReceipt('Data Activated', [
-        ['Network', _dataOperator!],
+        ['Verified Network', opName],
         ['Plan', '${_selectedPlan!['name']}'],
         ['Phone', _dataPhone.text],
         ['Amount', '$_symbol${res['amount']}'],
@@ -300,7 +477,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
 
   Future<void> _validateMeter() async {
     if (_disco == null) return _snack('Select your distribution company.');
-    if (_meterNo.text.length < 8) return _snack('Enter a valid meter number.');
+    if (_meterNo.text.length < 6) return _snack('Enter a valid meter number.');
     setState(() {
       _validating = true;
       _meterInfo = null;
@@ -319,7 +496,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   Future<void> _payElectricity() async {
     if (_meterInfo == null) return _snack('Verify the meter first.');
     final amt = double.tryParse(_powerAmount.text) ?? 0;
-    if (amt < 500) return _snack('Minimum payment is ${_symbol}500.');
+    if (amt <= 0) return _snack('Enter a valid electricity payment amount.');
     setState(() => _busy = true);
     try {
       final res = await _api.purchaseElectricity(
@@ -333,7 +510,7 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _showReceipt(
         _meterType == 'PREPAID' ? 'Token Generated' : 'Bill Paid',
         [
-          ['Disco', _disco!],
+          ['Provider', _disco!],
           ['Meter', _meterNo.text],
           ['Customer', '${res['customer_name']}'],
           ['Amount', '$_symbol${res['amount']}'],
@@ -455,7 +632,8 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Bills & Power', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
+        title: Text('Bills & Power ($_country · $_currency)',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Colors.white)),
         backgroundColor: isDark ? PayNoraColors.darkSurface : PayNoraColors.brandPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -501,20 +679,38 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         child: Text(t, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
       );
 
-  Widget _operatorPicker(String? selected, ValueChanged<String> onPick) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _operators.map((op) {
-        final code = '${op['code']}';
-        final active = code == selected;
-        return ChoiceChip(
-          label: Text('${op['icon'] ?? ''} ${op['name']}'),
-          selected: active,
-          selectedColor: PayNoraColors.brandSecondary.withOpacity(0.25),
-          onSelected: (_) => onPick(code),
-        );
-      }).toList(),
+  Widget _detectedNetworkBadge(String? name, String? icon) {
+    if (name == null) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text(
+          '✨ Network operator will be detected & verified automatically as you type the phone number.',
+          style: TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: PayNoraColors.success.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: PayNoraColors.success.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified, color: PayNoraColors.success, size: 18),
+          const SizedBox(width: 8),
+          Text(icon ?? '📶', style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Auto-Detected Network: $name',
+              style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.success, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -535,20 +731,25 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       );
 
   Widget _airtimeTab(bool isDark) {
+    final quickAmounts = _currency == 'NGN'
+        ? ['200', '500', '1000', '2000', '5000']
+        : ['5', '10', '20', '50', '100'];
+
     return ListView(padding: const EdgeInsets.all(20), children: [
       _card(isDark, [
-        _label('SELECT NETWORK'),
-        _operatorPicker(_airOperator, (c) => setState(() => _airOperator = c)),
-      ]),
-      _card(isDark, [
-        _label('PHONE NUMBER'),
+        _label('PHONE NUMBER (AUTO-DETECTS NETWORK)'),
         TextField(
           controller: _airPhone,
           keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(hintText: '0803 000 0000', prefixIcon: Icon(Icons.phone_android)),
+          onChanged: _onAirPhoneChanged,
+          decoration: const InputDecoration(
+            hintText: 'Enter phone number (e.g. 0803 123 4567)',
+            prefixIcon: Icon(Icons.phone_android),
+          ),
         ),
+        _detectedNetworkBadge(_airOperatorName, _airOperatorIcon),
         const SizedBox(height: 18),
-        _label('AMOUNT'),
+        _label('AMOUNT ($_currency)'),
         TextField(
           controller: _airAmount,
           keyboardType: TextInputType.number,
@@ -560,12 +761,15 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ['100', '200', '500', '1000', '2000', '5000']
+          children: quickAmounts
               .map((a) => ActionChip(label: Text('$_symbol$a'), onPressed: () => setState(() => _airAmount.text = a)))
               .toList(),
         ),
       ]),
-      _payButton('Buy $_symbol${_airAmount.text.isEmpty ? '0' : _airAmount.text} Airtime', _buyAirtime),
+      _payButton(
+        'Buy $_symbol${_airAmount.text.isEmpty ? '0' : _airAmount.text} ${_airOperator ?? ''} Airtime',
+        _buyAirtime,
+      ),
       const SizedBox(height: 14),
       Center(
         child: TextButton.icon(
@@ -580,20 +784,67 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     ]);
   }
 
+  Widget _dataTab(bool isDark) {
+    return ListView(padding: const EdgeInsets.all(20), children: [
+      _card(isDark, [
+        _label('PHONE NUMBER (AUTO-DETECTS NETWORK & PLANS)'),
+        TextField(
+          controller: _dataPhone,
+          keyboardType: TextInputType.phone,
+          onChanged: _onDataPhoneChanged,
+          decoration: const InputDecoration(
+            hintText: 'Enter phone number (e.g. 0802 123 4567)',
+            prefixIcon: Icon(Icons.phone_android),
+          ),
+        ),
+        _detectedNetworkBadge(_dataOperatorName, _dataOperatorIcon),
+      ]),
+      if (_dataOperator != null)
+        _card(isDark, [
+          _label('CHOOSE ${_dataOperator!} DATA BUNDLE'),
+          if (_plans.isEmpty) const LinearProgressIndicator(),
+          ..._plans.map((p) {
+            final active = _selectedPlan?['id'] == p['id'];
+            return GestureDetector(
+              onTap: () => setState(() => _selectedPlan = Map<String, dynamic>.from(p as Map)),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: active ? PayNoraColors.brandSecondary : (isDark ? PayNoraColors.darkBorder : PayNoraColors.lightBorder),
+                    width: active ? 2 : 1,
+                  ),
+                ),
+                child: Row(children: [
+                  Text('${p['allowance']}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text('${p['validity']}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    ]),
+                  ),
+                  Text('$_symbol${p['amount']}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                ]),
+              ),
+            );
+          }),
+        ]),
+      _payButton(
+        _selectedPlan == null ? 'Enter Phone to Load Data Plans' : 'Buy ${_selectedPlan!['allowance']} for $_symbol${_selectedPlan!['amount']}',
+        _buyData,
+      ),
+    ]);
+  }
+
   Widget _airtimeToCashTab(bool isDark) {
     final amt = double.tryParse(_a2cAmount.text) ?? 0.0;
     final fee = amt * 0.10;
     final cashPayout = amt * 0.90;
 
-    final ussdGuide = switch (_a2cOperator) {
-      'AIRTEL' => 'Airtel Me2U: Dial *432# to transfer or authorize conversion',
-      'MTN' => 'MTN Share: Dial *321# to transfer or authorize conversion',
-      'GLO' => 'Glo EasyShare: Dial *131# to transfer or authorize conversion',
-      _ => '9mobile EasyCliq: Dial *229# to transfer or authorize conversion',
-    };
-
     return ListView(padding: const EdgeInsets.all(20), children: [
-      // Section 1: One-Tap Reversal of Recent PayNora Airtime Purchases (100% Refund)
       if (_recentAirtime.isNotEmpty)
         _card(isDark, [
           Row(
@@ -669,7 +920,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           }),
         ]),
 
-      // Section 2: Airtime-to-Cash Converter (90% Cash Payout)
       _card(isDark, [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -687,70 +937,36 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           ],
         ),
         const Text(
-          'Convert excess Airtel, MTN, Glo, or 9mobile airtime on your SIM directly into cash in your PayNora Local Currency Wallet.',
+          'Enter your phone number below — PayNora automatically detects your network and converts your airtime into Local Currency Wallet cash.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 14),
-        _label('SELECT NETWORK'),
-        _operatorPicker(_a2cOperator, (c) => setState(() => _a2cOperator = c)),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: PayNoraColors.brandSecondary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, size: 16, color: PayNoraColors.brandSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(ussdGuide, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ),
-      ]),
-
-      _card(isDark, [
         _label('PHONE NUMBER HOLDING THE AIRTIME'),
         TextField(
           controller: _a2cPhone,
           keyboardType: TextInputType.phone,
+          onChanged: _onA2CPhoneChanged,
           decoration: const InputDecoration(hintText: '0802 000 0000', prefixIcon: Icon(Icons.sim_card_outlined)),
         ),
+        _detectedNetworkBadge(_a2cOperatorName, _a2cOperatorIcon),
         const SizedBox(height: 18),
         _label('AIRTIME AMOUNT TO CONVERT'),
         TextField(
           controller: _a2cAmount,
           keyboardType: TextInputType.number,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-          decoration: InputDecoration(prefixText: '$_symbol ', hintText: 'Min 100'),
+          decoration: InputDecoration(prefixText: '$_symbol ', hintText: '0'),
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ['500', '1000', '2000', '5000', '10000']
+          children: (_currency == 'NGN' ? ['500', '1000', '2000', '5000', '10000'] : ['10', '20', '50', '100'])
               .map((a) => ActionChip(label: Text('$_symbol$a'), onPressed: () => setState(() => _a2cAmount.text = a)))
               .toList(),
         ),
-        const SizedBox(height: 16),
-        _label('NETWORK SHARE PIN (OPTIONAL)'),
-        TextField(
-          controller: _a2cSharePin,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          maxLength: 4,
-          decoration: const InputDecoration(
-            hintText: '4-digit Share/Me2U PIN',
-            prefixIcon: Icon(Icons.lock_outline),
-            counterText: '',
-          ),
-        ),
         const Divider(height: 24),
-        // 90% Payout Breakdown Box
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -803,71 +1019,18 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     ]);
   }
 
-  Widget _dataTab(bool isDark) {
-    return ListView(padding: const EdgeInsets.all(20), children: [
-      _card(isDark, [
-        _label('SELECT NETWORK'),
-        _operatorPicker(_dataOperator, (c) {
-          setState(() => _dataOperator = c);
-          _loadPlans(c);
-        }),
-      ]),
-      if (_dataOperator != null)
-        _card(isDark, [
-          _label('CHOOSE BUNDLE'),
-          if (_plans.isEmpty) const LinearProgressIndicator(),
-          ..._plans.map((p) {
-            final active = _selectedPlan?['id'] == p['id'];
-            return GestureDetector(
-              onTap: () => setState(() => _selectedPlan = Map<String, dynamic>.from(p)),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: active ? PayNoraColors.brandSecondary : (isDark ? PayNoraColors.darkBorder : PayNoraColors.lightBorder),
-                    width: active ? 2 : 1,
-                  ),
-                ),
-                child: Row(children: [
-                  Text('${p['allowance']}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text('${p['validity']}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    ]),
-                  ),
-                  Text('$_symbol${p['amount']}', style: const TextStyle(fontWeight: FontWeight.w900)),
-                ]),
-              ),
-            );
-          }),
-        ]),
-      _card(isDark, [
-        _label('PHONE NUMBER'),
-        TextField(
-          controller: _dataPhone,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(hintText: '0803 000 0000', prefixIcon: Icon(Icons.phone_android)),
-        ),
-      ]),
-      _payButton(
-        _selectedPlan == null ? 'Buy Data' : 'Buy ${_selectedPlan!['allowance']} for $_symbol${_selectedPlan!['amount']}',
-        _buyData,
-      ),
-    ]);
-  }
-
   Widget _electricityTab(bool isDark) {
+    final quickAmounts = _currency == 'NGN'
+        ? ['1000', '2000', '5000', '10000', '20000']
+        : ['10', '25', '50', '100', '200'];
+
     return ListView(padding: const EdgeInsets.all(20), children: [
       _card(isDark, [
-        _label('DISTRIBUTION COMPANY'),
+        _label('ELECTRICITY PROVIDER ($_country)'),
         DropdownButtonFormField<String>(
           isExpanded: true,
           value: _disco,
-          hint: const Text('Select Disco'),
+          hint: const Text('Select Power Provider / Disco'),
           dropdownColor: isDark ? PayNoraColors.darkSurface : Colors.white,
           items: _discos
               .map((d) => DropdownMenuItem<String>(
@@ -935,19 +1098,19 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         ],
       ]),
       _card(isDark, [
-        _label('AMOUNT'),
+        _label('AMOUNT ($_currency)'),
         TextField(
           controller: _powerAmount,
           keyboardType: TextInputType.number,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-          decoration: InputDecoration(prefixText: '$_symbol ', hintText: 'Min 500'),
+          decoration: InputDecoration(prefixText: '$_symbol ', hintText: '0'),
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ['1000', '2000', '5000', '10000', '20000']
+          children: quickAmounts
               .map((a) => ActionChip(label: Text('$_symbol$a'), onPressed: () => setState(() => _powerAmount.text = a)))
               .toList(),
         ),

@@ -257,13 +257,18 @@ class ApiService {
   }
 
   // Bills & Utilities (Airtime, Data, Electricity)
+  Future<Map<String, dynamic>> detectOperator(String phone, [String country = 'NG']) async {
+    final res = await _dio.get('/bills/detect-operator', queryParameters: {'phone': phone, 'country': country});
+    return res.data;
+  }
+
   Future<List<dynamic>> getBillOperators([String country = 'NG']) async {
     final res = await _dio.get('/bills/operators', queryParameters: {'country': country});
     return (res.data['operators'] as List<dynamic>?) ?? [];
   }
 
-  Future<List<dynamic>> getDataPlans(String operatorCode) async {
-    final res = await _dio.get('/bills/data-plans', queryParameters: {'operator_code': operatorCode});
+  Future<List<dynamic>> getDataPlans(String operatorCode, [String country = 'NG']) async {
+    final res = await _dio.get('/bills/data-plans', queryParameters: {'operator_code': operatorCode, 'country': country});
     return (res.data['plans'] as List<dynamic>?) ?? [];
   }
 
