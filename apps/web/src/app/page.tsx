@@ -3,18 +3,37 @@
 import React, { useState } from 'react';
 import { useTheme } from '../lib/theme-context';
 
-const CORRIDORS = [
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬', curr: 'NGN', rate: '₦1,538.46', time: '12s' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', curr: 'GBP', rate: '£0.78', time: '18s' },
-  { code: 'US', name: 'United States', flag: '🇺🇸', curr: 'USD', rate: '$1.00', time: 'Instant' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', curr: 'CAD', rate: 'C$1.36', time: '24s' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', curr: 'AED', rate: '3.67 AED', time: '15s' },
-  { code: 'GH', name: 'Ghana', flag: '🇬🇭', curr: 'GHS', rate: '15.42 GHS', time: '20s' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦', curr: 'ZAR', rate: '18.15 ZAR', time: '28s' },
-  { code: 'DE', name: 'Germany (Eurozone)', flag: '🇩🇪', curr: 'EUR', rate: '€0.92', time: '15s' },
-  { code: 'FR', name: 'France (Eurozone)', flag: '🇫🇷', curr: 'EUR', rate: '€0.92', time: '15s' },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', curr: 'SAR', rate: '3.75 SAR', time: '22s' },
-  { code: 'CN', name: 'China', flag: '🇨🇳', curr: 'CNY', rate: '¥7.24', time: '45s' }
+const GLOBAL_CAPABILITIES = [
+  {
+    icon: '🌍',
+    title: 'Operational Globally',
+    desc: 'Available worldwide across Africa, Europe, the Americas, the Middle East, Asia, and Oceania with automatic local currency provisioning.'
+  },
+  {
+    icon: '💱',
+    title: 'Double-Currency Wallets',
+    desc: 'Every account automatically receives your local currency wallet alongside a USD (or GBP) reserve wallet with instant mid-market FX conversion.'
+  },
+  {
+    icon: '⚡',
+    title: 'Instant P2P, Bank & MoMo',
+    desc: 'Send money worldwide via SendMoni App-to-App (@tag, phone, email, or 10-digit account), commercial bank accounts, or Mobile Money.'
+  },
+  {
+    icon: '🪪',
+    title: 'Live Biometric KYC',
+    desc: 'Verified government ID authentication, passive liveness detection, and 1:1 selfie face matching powered by Didit.'
+  },
+  {
+    icon: '📱',
+    title: 'Bills, Reversal & To-Cash',
+    desc: 'Instant Nigerian Airtime, Data, and Electricity token vending with 1-tap 100% bill reversal and 90% Bill-to-Cash conversion.'
+  },
+  {
+    icon: '🏦',
+    title: 'PCI-DSS Level 1 Rails',
+    desc: 'Regulated card acquiring, bank transfers, and settlements powered by licensed payment partners Paystack and Flutterwave.'
+  }
 ];
 
 const SECURITY_PILLARS = [
@@ -331,45 +350,42 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* SECTION: 11 Operating Launch Corridors */}
+        {/* SECTION: Operational Globally */}
         <section style={{ margin: '60px 0 90px' }}>
-          <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 40px' }}>
+          <div style={{ textAlign: 'center', maxWidth: '740px', margin: '0 auto 40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: '#00C853', letterSpacing: '1px', textTransform: 'uppercase' }}>
-              Global Currency Liquidity
+              Borderless Financial Infrastructure
             </span>
             <h2 style={{ fontSize: '36px', fontWeight: 900, margin: '10px 0 16px', letterSpacing: '-0.5px' }}>
-              Active Launch Operating Corridors
+              Operational Globally — Built for Every Region
             </h2>
-            <p style={{ fontSize: '16px', color: isDark ? '#94A3B8' : '#64748B' }}>
-              Deterministic double-entry ledger routing across 11 primary countries with live rate locking.
+            <p style={{ fontSize: '16px', color: isDark ? '#94A3B8' : '#64748B', lineHeight: 1.6 }}>
+              SendMoni is operational worldwide, empowering individuals and businesses across every continent to hold double-currency wallets, move money across borders in seconds, and verify identities with bank-grade biometrics.
             </p>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-            gap: '16px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+            gap: '20px'
           }}>
-            {CORRIDORS.map((c) => (
+            {GLOBAL_CAPABILITIES.map((item) => (
               <div
-                key={c.code}
+                key={item.title}
                 style={{
                   background: isDark ? '#0D1A30' : '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '18px',
+                  borderRadius: '18px',
+                  padding: '24px',
                   border: `1px solid ${isDark ? '#1C2B4E' : '#E2E8F0'}`,
-                  textAlign: 'center'
+                  textAlign: 'left'
                 }}
               >
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>{c.flag}</div>
-                <div style={{ fontWeight: 800, fontSize: '15px', color: isDark ? '#FFF' : '#0D253F' }}>
-                  {c.name}
+                <div style={{ fontSize: '30px', marginBottom: '12px' }}>{item.icon}</div>
+                <div style={{ fontWeight: 800, fontSize: '17px', color: isDark ? '#FFF' : '#0D253F' }}>
+                  {item.title}
                 </div>
-                <div style={{ fontSize: '12px', color: '#00C853', fontWeight: 700, marginTop: '4px' }}>
-                  {c.curr} Wallet
-                </div>
-                <div style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', marginTop: '6px' }}>
-                  Avg. Delivery: {c.time}
+                <div style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#64748B', marginTop: '8px', lineHeight: 1.6 }}>
+                  {item.desc}
                 </div>
               </div>
             ))}

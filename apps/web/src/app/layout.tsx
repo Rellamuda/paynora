@@ -2,8 +2,8 @@ import React from 'react';
 import { ThemeProvider } from '../lib/theme-context';
 
 export const metadata = {
-  title: 'SendMoni — Global Money Movement & Multi-Currency Platform',
-  description: 'Send, receive, and hold money seamlessly across 11 active countries and currencies.',
+  title: 'SendMoni — Global Money Movement & Double-Currency Platform',
+  description: 'Operational globally. Send, receive, and hold money seamlessly across Africa, Europe, the Americas, Middle East, Asia, and Oceania.',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/logo.png',
