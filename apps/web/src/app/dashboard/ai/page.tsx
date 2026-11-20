@@ -11,7 +11,7 @@ export default function AIPage() {
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; action?: any }>>([
     {
       sender: 'ai',
-      text: "Hello! I am PayNora's AI Financial Intelligence Assistant. I can help you check real-time FX rates, draft cross-border transfers, check your wallet balances, or guide your currency strategy."
+      text: "Hello! I am SendMoni's AI Financial Intelligence Assistant. I can help you check real-time FX rates, draft cross-border transfers, check your wallet balances, or guide your currency strategy."
     }
   ]);
 
@@ -60,7 +60,7 @@ export default function AIPage() {
           "Check my Double Currency Wallet balances",
           "What is the current NGN to USD exchange rate?",
           "Send $200 to John Doe in London",
-          "How does PayNora's Double Currency model work?"
+          "How does SendMoni's Double Currency model work?"
         ].map((s, i) => (
           <button
             key={i}
@@ -106,7 +106,7 @@ export default function AIPage() {
           </div>
         ))}
         {loading && (
-          <div style={{ alignSelf: 'flex-start', color: '#94A3B8', fontSize: '14px' }}>PayNora AI is analyzing intent...</div>
+          <div style={{ alignSelf: 'flex-start', color: '#94A3B8', fontSize: '14px' }}>SendMoni AI is analyzing intent...</div>
         )}
       </div>
 
@@ -114,7 +114,7 @@ export default function AIPage() {
       <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
         <input
           type="text"
-          placeholder="Ask PayNora AI anything about your money, transfers, or rates..."
+          placeholder="Ask SendMoni AI anything about your money, transfers, or rates..."
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}

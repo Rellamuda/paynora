@@ -25,7 +25,7 @@ from app.api.v1 import (
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="PayNora Global AI-Powered Money Movement & Multi-Currency Platform Core API"
+    description="SendMoni Global AI-Powered Money Movement & Multi-Currency Platform Core API"
 )
 
 # CORS Middleware setup for Next.js & Mobile clients

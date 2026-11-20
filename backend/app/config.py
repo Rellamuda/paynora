@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    APP_NAME: str = "PayNora Global Financial Core"
+    APP_NAME: str = "SendMoni Global Financial Core"
     ENV: str = "development"
     PORT: int = 8000
     HOST: str = "0.0.0.0"

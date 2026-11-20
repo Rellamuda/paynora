@@ -210,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Welcome $fName $lName! Your official PayNora identifiers have been assigned:'),
+                Text('Welcome $fName $lName! Your official SendMoni identifiers have been assigned:'),
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
@@ -225,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text('10-Digit Account Number: $accNo', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                       const SizedBox(height: 6),
-                      Text('PayNora Tag / Code: $tag', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      Text('SendMoni Tag / Code: $tag', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                       const SizedBox(height: 6),
                       Text('Global Wallet Address: $addr', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 6),
@@ -414,7 +414,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Brand Title
                   Center(
                     child: Text(
-                      'PayNora',
+                      'SendMoni',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -834,11 +834,11 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: _loading ? null : _handleSignUp,
           child: _loading
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Create PayNora Account →', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              : const Text('Create SendMoni Account →', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
         ),
         const SizedBox(height: 12),
         const Text(
-          'By creating an account, you agree to PayNora\'s Terms of Service & Privacy Policy. Payment processing & bank settlements are powered by PCI-DSS Level 1 licensed gateways Paystack and Flutterwave.',
+          'By creating an account, you agree to SendMoni\'s Terms of Service & Privacy Policy. Payment processing & bank settlements are powered by PCI-DSS Level 1 licensed gateways Paystack and Flutterwave.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.4),
         ),

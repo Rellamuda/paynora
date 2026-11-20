@@ -17,18 +17,18 @@ export default function DeleteAccountPage() {
     <div style={{ minHeight: '100vh', background: '#070E1A', color: '#F8FAFC', fontFamily: 'Inter, system-ui, sans-serif', padding: '48px 20px' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto', background: '#0F1B31', borderRadius: '20px', padding: '36px', border: '1px solid rgba(239,68,68,0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, margin: 0 }}>Delete PayNora Account &amp; Data</h1>
+          <h1 style={{ fontSize: '24px', fontWeight: 900, margin: 0 }}>Delete SendMoni Account &amp; Data</h1>
           <a href="../" style={{ color: '#00C853', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}>← Back</a>
         </div>
         <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: 1.6 }}>
-          In compliance with Google Play User Data Policy and Apple App Store Guideline 5.1.1(v), you can permanently delete your PayNora account and personal data either directly inside the mobile app (<strong>Vault → Delete My Account &amp; Personal Data</strong>) or by submitting your registered email below.
+          In compliance with Google Play User Data Policy and Apple App Store Guideline 5.1.1(v), you can permanently delete your SendMoni account and personal data either directly inside the mobile app (<strong>Vault → Delete My Account &amp; Personal Data</strong>) or by submitting your registered email below.
         </p>
 
         {submitted ? (
           <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(0,200,83,0.12)', borderRadius: '14px', border: '1px solid rgba(0,200,83,0.4)' }}>
             <div style={{ fontWeight: 800, color: '#00C853', fontSize: '16px', marginBottom: '6px' }}>✓ Account Deletion Request Recorded</div>
             <div style={{ color: '#CBD5E1', fontSize: '13px', lineHeight: 1.6 }}>
-              Your request to permanently delete the PayNora account and associated personal data for <strong>{email}</strong> has been queued for immediate removal.
+              Your request to permanently delete the SendMoni account and associated personal data for <strong>{email}</strong> has been queued for immediate removal.
             </div>
           </div>
         ) : (

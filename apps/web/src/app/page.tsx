@@ -31,7 +31,7 @@ const SECURITY_PILLARS = [
   {
     icon: '🔒',
     title: 'Device & SIM Binding',
-    desc: 'Your PayNora account is cryptographically tied to your specific physical device. Web session hijacking, rogue Chrome extensions, and browser cookie theft are mathematically impossible.'
+    desc: 'Your SendMoni account is cryptographically tied to your specific physical device. Web session hijacking, rogue Chrome extensions, and browser cookie theft are mathematically impossible.'
   },
   {
     icon: '🤖',
@@ -46,7 +46,7 @@ export default function LandingPage() {
   const [freezeSuccess, setFreezeSuccess] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
 
-  const apkDownloadUrl = 'https://github.com/Rellamuda/paynora/releases/download/latest/PayNora.apk';
+  const apkDownloadUrl = 'https://github.com/Rellamuda/paynora/releases/download/latest/SendMoni.apk';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(apkDownloadUrl)}`;
 
   const handleFreeze = (e: React.FormEvent) => {
@@ -89,11 +89,11 @@ export default function LandingPage() {
             justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(13, 37, 63, 0.4)'
           }}>
-            <img src="logo.png" alt="PayNora" style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
+            <img src="logo.png" alt="SendMoni" style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}>PayNora</span>
+              <span style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}>SendMoni</span>
               <span style={{ fontSize: '10px', fontWeight: 800, color: '#00C853', background: 'rgba(0,200,83,0.15)', padding: '2px 8px', borderRadius: '6px' }}>
                 MOBILE VAULT
               </span>
@@ -206,7 +206,7 @@ export default function LandingPage() {
               lineHeight: 1.6,
               marginBottom: '32px'
             }}>
-              PayNora operates <strong>exclusively on Mobile</strong> to protect your money with hardware-bound biometric authentication (Face ID & Fingerprint). No browser session hijacking, no phishing forms, and no compromised cookies.
+              SendMoni operates <strong>exclusively on Mobile</strong> to protect your money with hardware-bound biometric authentication (Face ID & Fingerprint). No browser session hijacking, no phishing forms, and no compromised cookies.
             </p>
 
             {/* Double Currency Feature Highlight */}
@@ -250,7 +250,7 @@ export default function LandingPage() {
                 }}
               >
                 <span>📲</span>
-                <span>Download PayNora APK (Android)</span>
+                <span>Download SendMoni APK (Android)</span>
               </a>
 
               <a
@@ -291,7 +291,7 @@ export default function LandingPage() {
               Scan to Install on Your Phone
             </div>
             <p style={{ fontSize: '12px', color: isDark ? '#94A3B8' : '#64748B', margin: '0 0 20px' }}>
-              Point your phone camera at this QR code to download the official PayNora Android release directly.
+              Point your phone camera at this QR code to download the official SendMoni Android release directly.
             </p>
 
             <div style={{
@@ -303,7 +303,7 @@ export default function LandingPage() {
             }}>
               <img
                 src={qrCodeUrl}
-                alt="Scan to Download PayNora"
+                alt="Scan to Download SendMoni"
                 style={{ width: '180px', height: '180px', display: 'block' }}
               />
             </div>
@@ -334,7 +334,7 @@ export default function LandingPage() {
               Bank-Grade Security Architecture
             </span>
             <h2 style={{ fontSize: '36px', fontWeight: 900, margin: '10px 0 16px', letterSpacing: '-0.5px' }}>
-              Why PayNora Operates on Mobile Only
+              Why SendMoni Operates on Mobile Only
             </h2>
             <p style={{ fontSize: '16px', color: isDark ? '#94A3B8' : '#64748B', lineHeight: 1.6 }}>
               Fintech fraud happens primarily on web browsers through cookie theft, phishing, and rogue extensions. We removed the web attack surface entirely so your wealth stays protected.
@@ -440,7 +440,7 @@ export default function LandingPage() {
         gap: '20px'
       }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '16px' }}>PayNora Global Money Movement Platform</div>
+          <div style={{ fontWeight: 800, fontSize: '16px' }}>SendMoni Global Money Movement Platform</div>
           <div style={{ fontSize: '12px', color: isDark ? '#94A3B8' : '#64748B', marginTop: '4px' }}>
             Authoritative Core v1.0.1 • Biometric Mobile Enclave Security Architecture
           </div>
@@ -519,7 +519,7 @@ export default function LandingPage() {
               <form onSubmit={handleFreeze} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <input
                   type="email"
-                  placeholder="Enter your registered PayNora email"
+                  placeholder="Enter your registered SendMoni email"
                   value={freezeEmail}
                   onChange={(e) => setFreezeEmail(e.target.value)}
                   required

@@ -298,7 +298,7 @@ class BankingEngine:
     async def resolve_account(cls, account_number: str, bank_code: str, currency: str = "NGN") -> Dict[str, Any]:
         """
         Verify account number in real-time and resolve legal account holder name.
-        1. Checks PayNora internal 10-digit account numbers first.
+        1. Checks SendMoni internal 10-digit account numbers first.
         2. Uses Flutterwave & Paystack live verification for Nigerian NUBAN accounts.
         3. Resolves international & sandbox accounts cleanly so recipient legal full name auto-populates.
         """
@@ -306,7 +306,7 @@ class BankingEngine:
         code = str(bank_code).strip()
         curr = (currency or "NGN").upper()
 
-        # 0. Check if account number matches an internal PayNora 10-digit account number
+        # 0. Check if account number matches an internal SendMoni 10-digit account number
         try:
             from app.auth.store import USERS_DB
             for u in USERS_DB.values():
@@ -457,7 +457,7 @@ class BankingEngine:
                             "source": "balance",
                             "amount": int(float(amount) * 100),
                             "recipient": recipient_code,
-                            "reason": narration or f"PayNora Transfer {transfer_id}",
+                            "reason": narration or f"SendMoni Transfer {transfer_id}",
                             "reference": ref,
                         }
                         tx_resp = await client.post(f"{cls.PAYSTACK_BASE_URL}/transfer", json=tx_body, headers=headers)
@@ -486,7 +486,7 @@ class BankingEngine:
                     "account_bank": account_bank,
                     "account_number": account_number,
                     "amount": float(amount),
-                    "narration": narration or f"PayNora Transfer {transfer_id}",
+                    "narration": narration or f"SendMoni Transfer {transfer_id}",
                     "currency": curr,
                     "reference": ref,
                     "callback_url": "http://13.48.25.254:8000/api/v1/webhooks/flutterwave",

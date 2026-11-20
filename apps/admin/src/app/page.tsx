@@ -94,7 +94,7 @@ export default function AdminPortal() {
       <aside style={{ width: '280px', background: '#111827', borderRight: '1px solid #1F2937', padding: '24px 16px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '0 12px 24px 12px', borderBottom: '1px solid #1F2937' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFF' }}>PayNora</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFF' }}>SendMoni</span>
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#00C853', background: 'rgba(0,200,83,0.15)', padding: '2px 8px', borderRadius: '6px' }}>OPS PORTAL</span>
           </div>
           <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '6px' }}>Super Administrator • Tier 4 Security</div>

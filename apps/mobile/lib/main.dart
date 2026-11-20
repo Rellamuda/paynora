@@ -22,7 +22,7 @@ class PayNoraApp extends StatelessWidget {
       valueListenable: ThemeNotifier.instance,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'PayNora',
+          title: 'SendMoni',
           debugShowCheckedModeBanner: false,
           theme: PayNoraThemes.lightTheme,
           darkTheme: PayNoraThemes.darkTheme,

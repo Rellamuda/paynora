@@ -220,7 +220,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                           ));
                         }
 
-                        // Open in-app dedicated checkout WebView directly inside PayNora
+                        // Open in-app dedicated checkout WebView directly inside SendMoni
                         final bool? completed = await Navigator.push<bool>(
                           this.context,
                           MaterialPageRoute(

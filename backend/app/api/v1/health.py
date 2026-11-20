@@ -9,7 +9,7 @@ def check_health():
     redis_healthy = redis_client.ping()
     return {
         "status": "healthy",
-        "service": "PayNora Financial Core API",
+        "service": "SendMoni Financial Core API",
         "version": "1.0.0",
         "components": {
             "database": "postgresql_connected",

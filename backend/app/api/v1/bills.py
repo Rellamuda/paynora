@@ -1,5 +1,5 @@
 """
-PayNora Bills & Utilities — NIGERIA ONLY.
+SendMoni Bills & Utilities — NIGERIA ONLY.
 
 Airtime, Mobile Data and Electricity are available only to Nigerian-resident accounts (NGN wallet)
 and only for Nigerian phone numbers and Nigerian electricity meters.

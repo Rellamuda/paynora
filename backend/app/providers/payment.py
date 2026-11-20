@@ -177,7 +177,7 @@ class PaymentGatewayRouter:
                 "callback_url": callback_url or "http://13.48.25.254/payment-callback",
                 "metadata": {
                     "user_id": user_id,
-                    "platform": "PayNora Smart Rails"
+                    "platform": "SendMoni Smart Rails"
                 }
             }
             try:
@@ -224,12 +224,12 @@ class PaymentGatewayRouter:
                     "name": email.split("@")[0]
                 },
                 "customizations": {
-                    "title": "PayNora Wallet Deposit",
+                    "title": "SendMoni Wallet Deposit",
                     "description": f"Funding {currency.upper()} Wallet Balance"
                 },
                 "meta": {
                     "user_id": user_id,
-                    "service": "PayNora Global Engine"
+                    "service": "SendMoni Global Engine"
                 }
             }
             try:

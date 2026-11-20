@@ -323,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         content: const Text(
-          'This action permanently deletes your PayNora profile, assigned 10-digit Account Number, PayNora Tag, wallets, and personal data in compliance with Apple App Store Guideline 5.1.1(v) and Google Play User Data Policy.\n\nAre you sure you want to permanently delete your account?',
+          'This action permanently deletes your SendMoni profile, assigned 10-digit Account Number, SendMoni Tag, wallets, and personal data in compliance with Apple App Store Guideline 5.1.1(v) and Google Play User Data Policy.\n\nAre you sure you want to permanently delete your account?',
           style: TextStyle(fontSize: 13, height: 1.45),
         ),
         actions: [
@@ -343,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() => _deleting = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Your PayNora account and personal data have been permanently deleted.')),
+      const SnackBar(content: Text('Your SendMoni account and personal data have been permanently deleted.')),
     );
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -354,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeNotifier.instance.isDarkMode;
-    final firstName = (_profile?['first_name'] ?? 'PayNora').toString();
+    final firstName = (_profile?['first_name'] ?? 'SendMoni').toString();
     final lastName = (_profile?['last_name'] ?? 'Customer').toString();
     final fullName = '$firstName $lastName'.trim();
     final initials = '${firstName.isNotEmpty ? firstName[0] : 'P'}${lastName.isNotEmpty ? lastName[0] : 'C'}'.toUpperCase();
@@ -408,9 +408,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const Divider(height: 22),
-                _copyRow('10-Digit PayNora Account No', accNo),
+                _copyRow('10-Digit SendMoni Account No', accNo),
                 const SizedBox(height: 8),
-                _copyRow('PayNora Tag / Handle', tag),
+                _copyRow('SendMoni Tag / Handle', tag),
                 const SizedBox(height: 8),
                 _copyRow('Global Wallet Routing Address', walletAddr),
               ],
@@ -579,7 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: isDark ? Colors.white : PayNoraColors.brandPrimary)),
                 const SizedBox(height: 6),
                 const Text(
-                  'PayNora is a financial technology platform. Payment acquiring, card processing, and bank settlements are provided by PCI-DSS Level 1 licensed payment processors Paystack and Flutterwave.',
+                  'SendMoni is a financial technology platform. Payment acquiring, card processing, and bank settlements are provided by PCI-DSS Level 1 licensed payment processors Paystack and Flutterwave.',
                   style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
                 ),
                 const SizedBox(height: 10),
@@ -590,11 +590,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text('GDPR, NDPR & CCPA data protection standards', style: TextStyle(fontSize: 11)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showComplianceDocumentSheet(
-                    'PayNora Privacy Policy',
+                    'SendMoni Privacy Policy',
                     '1. DATA COLLECTION & PURPOSE\n'
-                    'PayNora collects your legal name, email address, phone number, country of residence, and optional KYC identity document strictly to provision your Double-Currency Wallets (Local Currency + USD/GBP), comply with Anti-Money Laundering (AML) regulations, and process transfers.\n\n'
+                    'SendMoni collects your legal name, email address, phone number, country of residence, and optional KYC identity document strictly to provision your Double-Currency Wallets (Local Currency + USD/GBP), comply with Anti-Money Laundering (AML) regulations, and process transfers.\n\n'
                     '2. PAYMENT CARD & BANK SECURITY\n'
-                    'PayNora never stores raw credit/debit card numbers or CVV codes. All card and bank deposits are processed directly by PCI-DSS Level 1 certified licensed processors Paystack and Flutterwave.\n\n'
+                    'SendMoni never stores raw credit/debit card numbers or CVV codes. All card and bank deposits are processed directly by PCI-DSS Level 1 certified licensed processors Paystack and Flutterwave.\n\n'
                     '3. DATA ENCRYPTION & RETENTION\n'
                     'All data in transit is encrypted via TLS 1.3 and credentials are stored inside your device hardware secure storage. You may permanently delete your account and personal data at any time from Settings -> Delete My Account & Data or online at https://rellamuda.github.io/paynora/delete-account/.\n\n'
                     '4. CONTACT & DATA PROTECTION OFFICER\n'
@@ -611,16 +611,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => _showComplianceDocumentSheet(
                     'Terms of Service & Fee Schedule',
                     '1. SERVICE OVERVIEW\n'
-                    'PayNora provides cross-border peer-to-peer wallet transfers, local commercial bank transfers, currency exchange between your Local Currency Wallet and Foreign Currency Wallet (USD/GBP), and utility bill payments (Airtime, Mobile Data, Electricity).\n\n'
+                    'SendMoni provides cross-border peer-to-peer wallet transfers, local commercial bank transfers, currency exchange between your Local Currency Wallet and Foreign Currency Wallet (USD/GBP), and utility bill payments (Airtime, Mobile Data, Electricity).\n\n'
                     '2. TRANSPARENT FEE SCHEDULE\n'
-                    '• PayNora-to-PayNora (Same Currency): 0.0% fee\n'
-                    '• PayNora-to-PayNora (Cross-Currency FX): 0.3% spread\n'
+                    '• SendMoni-to-SendMoni (Same Currency): 0.0% fee\n'
+                    '• SendMoni-to-SendMoni (Cross-Currency FX): 0.3% spread\n'
                     '• External Bank & Mobile Money Remittance: 0.5% FX spread\n'
                     '• Local Bank Transfer (Same Currency): 0% FX fee\n'
                     '• One-Tap Bill Reversal (Airtime / Data / Electricity): 100% full refund to Local Currency Wallet\n'
                     '• Bill-to-Cash Converter (Airtime / Data / Electricity): 90% instant cash payout (10% conversion fee)\n\n'
                     '3. REGULATORY & GATEWAY DISCLOSURE\n'
-                    'PayNora is a financial technology application, not a commercial bank. Regulated payment collection, settlement, and payout services are powered by licensed payment gateway partners Paystack and Flutterwave.',
+                    'SendMoni is a financial technology application, not a commercial bank. Regulated payment collection, settlement, and payout services are powered by licensed payment gateway partners Paystack and Flutterwave.',
                   ),
                 ),
                 const Divider(height: 1),
@@ -667,13 +667,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: const Text('Log Out of PayNora', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  label: const Text('Log Out of SendMoni', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Log Out'),
-                        content: const Text('Are you sure you want to log out of your PayNora account?'),
+                        content: const Text('Are you sure you want to log out of your SendMoni account?'),
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                           ElevatedButton(
@@ -715,7 +715,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
           const Center(
-            child: Text('PayNora Mobile Core v1.2 • PCI-DSS Level 1 Partner Rails', style: TextStyle(color: Colors.grey, fontSize: 11)),
+            child: Text('SendMoni Mobile Core v1.2 • PCI-DSS Level 1 Partner Rails', style: TextStyle(color: Colors.grey, fontSize: 11)),
           ),
           const SizedBox(height: 20),
         ],

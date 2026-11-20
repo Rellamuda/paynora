@@ -17,7 +17,7 @@ def persist_users_db() -> None:
 
 def generate_account_identifiers(email: str, first_name: str, country_iso: str) -> Dict[str, str]:
     """
-    Generate deterministic, unique 10-digit PayNora Account Number, @paynora_tag,
+    Generate deterministic, unique 10-digit SendMoni Account Number, @paynora_tag,
     and Global Wallet Routing Address (PN-<ISO>-<10-digit>) for an onboarded user.
     """
     email_clean = (email or "user@paynora.com").lower().strip()

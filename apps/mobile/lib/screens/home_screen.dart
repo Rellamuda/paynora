@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 10),
             const Text(
-              'PayNora',
+              'SendMoni',
               style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 21, letterSpacing: -0.5),
             ),
             const SizedBox(width: 8),
@@ -332,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final tag = '${_profile?['paynora_tag'] ?? '@paynora'}';
                                   Clipboard.setData(ClipboardData(text: tag));
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('PayNora Tag copied: $tag')),
+                                    SnackBar(content: Text('SendMoni Tag copied: $tag')),
                                   );
                                 },
                                 child: Row(

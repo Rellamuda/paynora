@@ -5,7 +5,7 @@ from app.events.kafka import event_publisher
 
 class NotificationService:
     """
-    Centralized PayNora notification engine.
+    Centralized SendMoni notification engine.
     Handles push alerts, transaction receipts, in-app notifications, and event publishing.
     """
     _notifications: List[Dict[str, Any]] = [

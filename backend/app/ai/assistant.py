@@ -7,7 +7,7 @@ from app.wallets.models import WalletEngine
 
 class AIFinancialAssistantEngine:
     """
-    PayNora Nora AI & PayNora AI Financial Intelligence Engine.
+    SendMoni Nora AI & SendMoni AI Financial Intelligence Engine.
     Powered by Google Gemini Generative AI model with financial domain context.
     Strict Hierarchy: AI proposes intent -> Backend validates -> Explicit User Confirmation Required.
     """
@@ -21,9 +21,9 @@ class AIFinancialAssistantEngine:
             return None
 
         system_instruction = (
-            "You are Nora, the official AI Financial Intelligence Assistant of PayNora Global Money Movement Platform. "
-            "PayNora provides Double Currency Digital Wallets: one in the user's country local currency (e.g., NGN, GHS, KES, GBP, EUR, CAD) "
-            "and the other in USD (Global Reserve). PayNora offers instant cross-border transfers, real-time FX rate locking, "
+            "You are Nora, the official AI Financial Intelligence Assistant of SendMoni Global Money Movement Platform. "
+            "SendMoni provides Double Currency Digital Wallets: one in the user's country local currency (e.g., NGN, GHS, KES, GBP, EUR, CAD) "
+            "and the other in USD (Global Reserve). SendMoni offers instant cross-border transfers, real-time FX rate locking, "
             "smart dual gateway routing (Flutterwave and Paystack), and biometric security. "
             "Keep your responses helpful, concise, authoritative, professional, and friendly. Avoid excessive jargon."
         )
@@ -89,7 +89,7 @@ class AIFinancialAssistantEngine:
             fx_quote = FXEngine.generate_quote(raw_currency, dest_currency, raw_amount)
 
             gemini_reply = cls.call_gemini(
-                f"Confirming a transfer intent of {raw_currency} {raw_amount} to {recipient_name}. Explain how PayNora's double-currency engine locks the rate.",
+                f"Confirming a transfer intent of {raw_currency} {raw_amount} to {recipient_name}. Explain how SendMoni's double-currency engine locks the rate.",
                 user_context
             )
 
@@ -139,12 +139,12 @@ class AIFinancialAssistantEngine:
         if "rate" in prompt_clean.lower() or "fx" in prompt_clean.lower() or "exchange" in prompt_clean.lower():
             return {
                 "intent": "FX_INQUIRY",
-                "message": "PayNora locks interbank mid-market FX rates with a 0.5% corridor spread across NGN, USD, GBP, and EUR. Current rate: 1 USD = ₦1,538.46.",
+                "message": "SendMoni locks interbank mid-market FX rates with a 0.5% corridor spread across NGN, USD, GBP, and EUR. Current rate: 1 USD = ₦1,538.46.",
                 "requires_confirmation": False
             }
 
         return {
             "intent": "GENERAL_ASSISTANCE",
-            "message": f"Hello! I am Nora, your PayNora AI financial assistant. I can help you monitor live FX volatility, check your Double Currency Wallets, or prepare instant transfers.",
+            "message": f"Hello! I am Nora, your SendMoni AI financial assistant. I can help you monitor live FX volatility, check your Double Currency Wallets, or prepare instant transfers.",
             "requires_confirmation": False
         }

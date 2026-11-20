@@ -1,4 +1,4 @@
-name: Build PayNora Mobile APK
+name: Build SendMoni Mobile APK
 
 on:
   push:
@@ -48,23 +48,23 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PayNora-v1.2.${{ github.run_number }}-release.apk
+          name: SendMoni-v1.2.${{ github.run_number }}-release.apk
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
       - name: Prepare Named APK
         run: |
-          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
-          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/PayNora-v1.2.${{ github.run_number }}.apk
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/SendMoni.apk
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk apps/mobile/build/app/outputs/flutter-apk/SendMoni-v1.2.${{ github.run_number }}.apk
 
       - name: Release Latest APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: PayNora Mobile Latest Release (v1.2.${{ github.run_number }})
-          body: "Official PayNora Mobile Release APK (v1.2.${{ github.run_number }}) with App-to-App (P2P) + Bank + Mobile Money International Transfers, Default USD & GBP Foreign Wallets, Local Bank Transfers, and Airtime/Data/Electricity Bills."
+          name: SendMoni Mobile Latest Release (v1.2.${{ github.run_number }})
+          body: "Official SendMoni Mobile Release APK (v1.2.${{ github.run_number }}) with App-to-App (P2P) + Bank + Mobile Money International Transfers, Default USD & GBP Foreign Wallets, Local Bank Transfers, and Airtime/Data/Electricity Bills."
           files: |
-            apps/mobile/build/app/outputs/flutter-apk/PayNora.apk
-            apps/mobile/build/app/outputs/flutter-apk/PayNora-v1.2.${{ github.run_number }}.apk
+            apps/mobile/build/app/outputs/flutter-apk/SendMoni.apk
+            apps/mobile/build/app/outputs/flutter-apk/SendMoni-v1.2.${{ github.run_number }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

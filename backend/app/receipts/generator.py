@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 class ReceiptGenerator:
     """
-    Generates official, tamper-evident PayNora transaction alert receipts.
+    Generates official, tamper-evident SendMoni transaction alert receipts.
     Supports structured JSON data and print-ready styled HTML receipts.
     """
 
@@ -33,7 +33,7 @@ class ReceiptGenerator:
             "timestamp": created_at,
             "status": status,
             "issuer": {
-                "name": "PayNora Global Inc.",
+                "name": "SendMoni Global Inc.",
                 "support_email": "support@paynora.com",
                 "regulated_status": "Licensed Global Money Movement Platform"
             },
@@ -60,7 +60,7 @@ class ReceiptGenerator:
 
     @classmethod
     def generate_html_receipt(cls, receipt_data: Dict[str, Any]) -> str:
-        """Render print-ready HTML receipt with PayNora branding and printable CSS."""
+        """Render print-ready HTML receipt with SendMoni branding and printable CSS."""
         r = receipt_data
         fin = r["financials"]
         status_color = "#10B981" if r["status"] in ["COMPLETED", "SUCCESSFUL"] else "#F59E0B"
@@ -69,7 +69,7 @@ class ReceiptGenerator:
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PayNora Transaction Receipt - {r['receipt_number']}</title>
+  <title>SendMoni Transaction Receipt - {r['receipt_number']}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {{
@@ -214,7 +214,7 @@ class ReceiptGenerator:
 <body>
   <div class="receipt-card">
     <div class="header">
-      <h1>PayNora</h1>
+      <h1>SendMoni</h1>
       <p>Official Transaction Receipt</p>
       <div class="status-badge">{r['status']}</div>
     </div>
@@ -277,7 +277,7 @@ class ReceiptGenerator:
     <button class="btn-print" onclick="window.print()">Download / Print PDF Receipt</button>
 
     <div class="footer">
-      PayNora Global Inc. &bull; support@paynora.com &bull; End-to-end encrypted transfer
+      SendMoni Global Inc. &bull; support@paynora.com &bull; End-to-end encrypted transfer
     </div>
   </div>
 </body>

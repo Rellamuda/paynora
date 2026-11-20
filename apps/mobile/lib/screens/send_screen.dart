@@ -23,7 +23,7 @@ class _SendScreenState extends State<SendScreen> {
   String _destCountry = 'NG';
   String _destCurrency = 'NGN';
 
-  // 'P2P' (PayNora-to-PayNora, default), 'BANK' (Commercial Bank), 'MOMO' (Mobile Money)
+  // 'P2P' (SendMoni-to-SendMoni, default), 'BANK' (Commercial Bank), 'MOMO' (Mobile Money)
   String _payoutMethod = 'P2P';
 
   // Only applicable to P2P: 'LOCAL' (recipient's local currency) or 'ORIGINAL' (keep USD/GBP)
@@ -412,7 +412,7 @@ class _SendScreenState extends State<SendScreen> {
       } else {
         setState(() {
           _p2pRecipient = null;
-          _p2pLookupError = 'No PayNora user found for "$query". Switch to Bank or Mobile Money to pay outside the app.';
+          _p2pLookupError = 'No SendMoni user found for "$query". Switch to Bank or Mobile Money to pay outside the app.';
           _lookingUpP2P = false;
         });
       }
@@ -459,7 +459,7 @@ class _SendScreenState extends State<SendScreen> {
           _destCountry = mock['country_iso'];
           _destCurrency = mock['local_currency'];
         } else {
-          _p2pLookupError = 'User not found on PayNora. Enter their 10-digit PayNora Account No, @tag, phone, or email.';
+          _p2pLookupError = 'User not found on SendMoni. Enter their 10-digit SendMoni Account No, @tag, phone, or email.';
         }
         _lookingUpP2P = false;
       });
@@ -757,7 +757,7 @@ class _SendScreenState extends State<SendScreen> {
 
     if (_payoutMethod == 'P2P') {
       if (_p2pRecipient == null) {
-        _snack('Please enter and verify a PayNora recipient (10-digit Account No, @tag, phone, or email).');
+        _snack('Please enter and verify a SendMoni recipient (10-digit Account No, @tag, phone, or email).');
         return;
       }
       setState(() => _sending = true);
@@ -888,7 +888,7 @@ class _SendScreenState extends State<SendScreen> {
                     _railButton(
                       id: 'P2P',
                       icon: Icons.bolt_rounded,
-                      title: 'PayNora App',
+                      title: 'SendMoni App',
                       subtitle: 'Instant · Lowest fee',
                       isDark: isDark,
                     ),
@@ -1065,7 +1065,7 @@ class _SendScreenState extends State<SendScreen> {
                                         : (isDark ? Colors.white : Colors.black),
                                   ),
                                 ),
-                                const Text('0 fee · Holds in PayNora wallet',
+                                const Text('0 fee · Holds in SendMoni wallet',
                                     style: TextStyle(fontSize: 10, color: Colors.grey)),
                               ],
                             ),
@@ -1147,7 +1147,7 @@ class _SendScreenState extends State<SendScreen> {
                   : const Icon(Icons.fingerprint),
               label: Text(
                 _payoutMethod == 'P2P'
-                    ? 'Send Instantly via PayNora'
+                    ? 'Send Instantly via SendMoni'
                     : 'Authorize & Send to ${_payoutMethod == 'BANK' ? 'Bank' : 'Mobile Money'}',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
@@ -1511,7 +1511,7 @@ class _SendScreenState extends State<SendScreen> {
                 child: const Icon(Icons.check_circle_rounded, color: PayNoraColors.success, size: 48),
               ),
               const SizedBox(height: 24),
-              Text(isP2P ? 'Instant PayNora Transfer Sent!' : 'Transfer Dispatched!',
+              Text(isP2P ? 'Instant SendMoni Transfer Sent!' : 'Transfer Dispatched!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
               const SizedBox(height: 10),

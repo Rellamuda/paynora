@@ -41,7 +41,7 @@ class PayNoraColors {
   static const Color borderSubtle = lightBorder;
 }
 
-/// Global Theme State Notifier for PayNora
+/// Global Theme State Notifier for SendMoni
 class ThemeNotifier extends ValueNotifier<ThemeMode> {
   ThemeNotifier._() : super(ThemeMode.dark);
   static final ThemeNotifier instance = ThemeNotifier._();

@@ -74,7 +74,7 @@ def resolve_foreign_currency(local_currency: str) -> str:
 
 class WalletEngine:
     """
-    PayNora Global Double-Currency Wallet Engine:
+    SendMoni Global Double-Currency Wallet Engine:
     Every user in every country of the world is provisioned strictly TWO wallets:
     1. Their Country of Residence's Local Currency (e.g., NGN, GHS, KES, GBP, EUR, CAD, INR, BRL, etc.)
     2. USD as their Foreign Currency Wallet (or GBP if their local currency is already USD, e.g. USA residents).

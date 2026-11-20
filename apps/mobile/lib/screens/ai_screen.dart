@@ -15,7 +15,7 @@ class _AIScreenState extends State<AIScreen> {
   final List<Map<String, String>> _messages = [
     {
       'role': 'assistant',
-      'text': 'Hello! I am Nora, your Gemini-powered AI financial assistant for PayNora. I can help you monitor live FX volatility, manage your Double Currency Digital Wallets (Local Currency + USD), recommend optimal transfer windows across our active corridors, and track live payouts. How can I help you today?'
+      'text': 'Hello! I am Nora, your Gemini-powered AI financial assistant for SendMoni. I can help you monitor live FX volatility, manage your Double Currency Digital Wallets (Local Currency + USD), recommend optimal transfer windows across our active corridors, and track live payouts. How can I help you today?'
     }
   ];
   bool _thinking = false;
@@ -45,7 +45,7 @@ class _AIScreenState extends State<AIScreen> {
       });
     } catch (e) {
       // Intelligent fallback response
-      String reply = 'I have processed your query against PayNora financial telemetry.';
+      String reply = 'I have processed your query against SendMoni financial telemetry.';
       if (text.toLowerCase().contains('gbp') || text.toLowerCase().contains('rate')) {
         reply = 'The current GBP/NGN rate is ₦1,923.08 with a 0.5% transparent corridor margin. Volatility is minimal today, making this a strong window to dispatch international payouts.';
       } else if (text.toLowerCase().contains('tier') || text.toLowerCase().contains('limit')) {

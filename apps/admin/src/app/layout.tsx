@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'PayNora Operations & Compliance Admin Portal',
+  title: 'SendMoni Operations & Compliance Admin Portal',
   description: 'Internal operations, risk review, ledger reconciliation, and corridor management',
 };
 

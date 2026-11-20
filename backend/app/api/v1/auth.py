@@ -52,7 +52,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     user = UserStore.get_by_id(sub)
     if not user:
         email = payload.get("email", "customer@paynora.com") if payload else "customer@paynora.com"
-        first_name = payload.get("first_name", "PayNora") if payload else "PayNora"
+        first_name = payload.get("first_name", "SendMoni") if payload else "SendMoni"
         last_name = payload.get("last_name", "Customer") if payload else "Customer"
         country_iso = (payload.get("country_iso", "NG") if payload else "NG").upper()
         user = _ensure_user_identifiers({
@@ -155,5 +155,5 @@ def delete_my_account(current_user: dict = Depends(get_current_user)):
     return {
         "status": "DELETED",
         "user_id": user_id,
-        "message": "Your PayNora account, wallets, and personal data have been permanently deleted."
+        "message": "Your SendMoni account, wallets, and personal data have been permanently deleted."
     }

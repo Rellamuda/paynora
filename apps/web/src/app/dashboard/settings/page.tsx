@@ -35,7 +35,7 @@ export default function SettingsPage() {
         {/* Appearance & Theme Selector */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>Interface Theme & Appearance</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Choose between PayNora Midnight Dark theme or Clean Slate Light theme.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Choose between SendMoni Midnight Dark theme or Clean Slate Light theme.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div
@@ -146,7 +146,7 @@ export default function SettingsPage() {
         {/* Security & Ledger Protocol */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '20px', padding: '32px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 14px 0' }}>Ledger Security & Infrastructure</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Your account is guarded by PayNora's deterministic double-entry accounting engine.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px 0' }}>Your account is guarded by SendMoni's deterministic double-entry accounting engine.</p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             <span style={{ padding: '6px 12px', background: 'var(--bg-card-subtle)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>

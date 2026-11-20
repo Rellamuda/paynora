@@ -1,7 +1,7 @@
 """
-PayNora App-to-App (P2P) Transfers.
+SendMoni App-to-App (P2P) Transfers.
 
-Moves money between two PayNora wallets entirely on the internal ledger:
+Moves money between two SendMoni wallets entirely on the internal ledger:
 no bank, no payout gateway, settles instantly.
 
 Flow:
@@ -189,7 +189,7 @@ class P2PTransferRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @router.get("/lookup")
 def lookup_recipient(q: str = Query(..., min_length=3), current_user: dict = Depends(get_current_user)):
-    """Find a PayNora user by phone number, email, or @tag."""
+    """Find a SendMoni user by phone number, email, or @tag."""
     user = _find_user(q)
     if not user:
         return {"found": False, "query": q}
@@ -234,7 +234,7 @@ def p2p_transfer(
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     current_user: dict = Depends(get_current_user),
 ):
-    """Instant wallet-to-wallet transfer between two PayNora users."""
+    """Instant wallet-to-wallet transfer between two SendMoni users."""
     cache_key = f"{current_user['user_id']}:{idempotency_key}"
     if cache_key in P2P_IDEMPOTENCY:
         return P2P_IDEMPOTENCY[cache_key]
@@ -297,7 +297,7 @@ def p2p_transfer(
         NotificationService.dispatch(
             user_id=recipient["user_id"],
             title="Money Received",
-            message=f"You received {dst} {receive_amount} on PayNora.",
+            message=f"You received {dst} {receive_amount} on SendMoni.",
             notification_type="CREDIT_ALERT",
             data={"transfer_id": record["transfer_id"]},
         )
