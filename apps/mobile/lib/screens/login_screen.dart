@@ -398,28 +398,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Brand Logo Badge
                   Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: PayNoraColors.brandPrimary,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: PayNoraColors.brandPrimary.withOpacity(0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: Colors.white,
-                          size: 36,
-                        ),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: PayNoraColors.brandSecondary,
+                        size: 56,
                       ),
                     ),
                   ),

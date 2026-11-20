@@ -182,10 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/logo.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
-            ),
+            Image.asset('assets/logo.png', width: 40, height: 40, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

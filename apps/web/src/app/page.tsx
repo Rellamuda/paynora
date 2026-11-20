@@ -78,18 +78,15 @@ export default function LandingPage() {
         borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: '#0D253F',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(13, 37, 63, 0.4)'
-          }}>
-            <img src="logo.png" alt="SendMoni" style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
-          </div>
+          <img
+            src="logo.png"
+            alt="SendMoni"
+            style={{
+              width: '56px',
+              height: '56px',
+              display: 'block',
+            }}
+          />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}>SendMoni</span>
