@@ -101,8 +101,8 @@ export default function LandingPage() {
             src="logo.png"
             alt="SendMoni"
             style={{
-              width: '56px',
-              height: '56px',
+              width: '42px',
+              height: '42px',
               display: 'block',
             }}
           />

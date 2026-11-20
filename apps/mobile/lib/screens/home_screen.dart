@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Image.asset('assets/logo.png', width: 40, height: 40, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
+            Image.asset('assets/logo.png', width: 32, height: 32, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

@@ -400,8 +400,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: Image.asset(
                       'assets/logo.png',
-                      width: 96,
-                      height: 96,
+                      width: 72,
+                      height: 72,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.account_balance_wallet_rounded,
