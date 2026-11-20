@@ -173,6 +173,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final isDark = ThemeNotifier.instance.isDarkMode;
 
+    final firstName = (_profile?['first_name'] ?? '').toString().trim();
+    final lastName = (_profile?['last_name'] ?? '').toString().trim();
+    final ownerName = '$firstName $lastName'.trim();
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -185,20 +189,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Image.asset('assets/logo.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const Icon(Icons.bolt, color: PayNoraColors.brandSecondary)),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'SendMoni',
-              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 21, letterSpacing: -0.5),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: PayNoraColors.brandSecondary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'GLOBAL',
-                style: TextStyle(color: PayNoraColors.brandSecondary, fontSize: 9, fontWeight: FontWeight.w800),
+            Expanded(
+              child: Text(
+                ownerName.isNotEmpty ? 'Hi, $ownerName' : 'Hi there',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18, letterSpacing: -0.3),
               ),
             ),
           ],
