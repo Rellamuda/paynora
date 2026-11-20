@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Security
     JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_paynora_jwt_key_2026_dev")
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for mobile app sessions
 
     # Payment Gateways (Smart Dual Engine - Loaded from Environment)
     PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET_KEY", "")

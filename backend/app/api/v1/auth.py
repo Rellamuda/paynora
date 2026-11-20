@@ -49,7 +49,12 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
     token = authorization.split(" ")[1]
     payload = decode_access_token(token)
-    sub = payload.get("sub") if payload else "usr_demo_customer"
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Your session has expired. Please log in again.",
+        )
+    sub = payload.get("sub")
     user = UserStore.get_by_id(sub)
     if not user:
         email = payload.get("email", "customer@paynora.com") if payload else "customer@paynora.com"
