@@ -5,6 +5,7 @@ from app.auth.store import persist_users_db
 from app.kyc.state_machine import KYCState, KYCStateMachine
 from app.kyc.capabilities import AccountCapabilityPolicy
 from app.providers.kyc import MockKYCProvider
+from app.providers.didit_kyc import DiditKYCProvider, didit_configured
 from app.providers.aml import MockAMLProvider
 from app.events.kafka import event_publisher
 
@@ -16,6 +17,8 @@ class VerificationRequestPayload(BaseModel):
     selfie_captured: bool = True
     id_photo_captured: bool = True
     selfie_hash: str | None = None
+    id_image_base64: str | None = None
+    selfie_image_base64: str | None = None
 
 @router.get("/status")
 def get_kyc_status(current_user: dict = Depends(get_current_user)):
@@ -28,7 +31,7 @@ def get_kyc_status(current_user: dict = Depends(get_current_user)):
     }
 
 @router.post("/verify")
-def submit_identity_verification(
+async def submit_identity_verification(
     payload: VerificationRequestPayload,
     current_user: dict = Depends(get_current_user)
 ):
@@ -39,18 +42,36 @@ def submit_identity_verification(
     aml_result = MockAMLProvider.screen_customer(full_name, current_user["country_iso"])
     if not aml_result["passed"]:
         current_user["kyc_status"] = KYCState.REJECTED
+        persist_users_db()
         event_publisher.publish_event("KYCRejected", {"user_id": user_id, "reason": aml_result["details"]})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Verification failed compliance check: {aml_result['details']}"
         )
 
-    # 2. Identity Document Verification
-    kyc_result = MockKYCProvider.verify_identity(
-        user_id=user_id,
-        document_type=payload.document_type,
-        document_number=payload.document_number
-    )
+    # 2. Live Biometric ID + Selfie Liveness + 1:1 Face Match (Didit v3 when images & key are present)
+    if didit_configured() and (payload.id_image_base64 or payload.selfie_image_base64):
+        kyc_result = await DiditKYCProvider.verify_kyc(
+            user_id=user_id,
+            document_type=payload.document_type,
+            document_number=payload.document_number,
+            id_image_base64=payload.id_image_base64,
+            selfie_image_base64=payload.selfie_image_base64,
+        )
+        if kyc_result["status"] != "APPROVED":
+            current_user["kyc_status"] = KYCState.REJECTED
+            persist_users_db()
+            event_publisher.publish_event("KYCRejected", {"user_id": user_id, "reason": kyc_result["reason"]})
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Didit verification declined: {kyc_result['reason']}",
+            )
+    else:
+        kyc_result = MockKYCProvider.verify_identity(
+            user_id=user_id,
+            document_type=payload.document_type,
+            document_number=payload.document_number
+        )
 
     new_state = KYCState(kyc_result["status"])
     current_user["kyc_status"] = new_state
@@ -68,9 +89,11 @@ def submit_identity_verification(
         "user_id": user_id,
         "kyc_status": new_state,
         "kyc_tier": "TIER_3",
+        "provider": kyc_result.get("provider", "LOCAL_MOCK"),
         "selfie_verified": payload.selfie_captured,
         "id_photo_verified": payload.id_photo_captured,
-        "liveness_score": 0.99 if payload.selfie_captured else 0.0,
+        "liveness_score": kyc_result.get("liveness_score", 0.99 if payload.selfie_captured else 0.0),
+        "face_match_score": kyc_result.get("face_match_score", 0.98 if payload.selfie_captured else 0.0),
         "capabilities": new_capabilities,
         "verification_result": kyc_result
     }

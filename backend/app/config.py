@@ -55,4 +55,7 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
 
+    # Live Biometric KYC & ID Verification (Didit v3)
+    DIDIT_API_KEY: str = os.getenv("DIDIT_API_KEY", "")
+
 settings = Settings()

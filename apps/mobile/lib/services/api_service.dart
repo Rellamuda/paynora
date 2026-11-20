@@ -106,6 +106,8 @@ class ApiService {
     bool selfieCaptured = true,
     bool idPhotoCaptured = true,
     String? selfieHash,
+    String? idImageBase64,
+    String? selfieImageBase64,
   }) async {
     final headers = await _authHeaders();
     final res = await _dio.post('/kyc/verify',
@@ -115,6 +117,8 @@ class ApiService {
         'selfie_captured': selfieCaptured,
         'id_photo_captured': idPhotoCaptured,
         'selfie_hash': selfieHash,
+        if (idImageBase64 != null) 'id_image_base64': idImageBase64,
+        if (selfieImageBase64 != null) 'selfie_image_base64': selfieImageBase64,
       },
       options: Options(headers: headers),
     );

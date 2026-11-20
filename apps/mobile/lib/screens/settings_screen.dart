@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -237,7 +238,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             );
                             return;
                           }
-                          if (!selfieCaptured) {
+                          if (!idCaptured || idPhotoFile == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please capture your Government ID photo (Step 2) first.')),
+                            );
+                            return;
+                          }
+                          if (!selfieCaptured || selfiePhotoFile == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Please capture a Live Selfie (Step 3) to complete biometric KYC.')),
                             );
@@ -245,23 +252,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
                           setModalState(() => submittingKyc = true);
                           try {
-                            await _api.verifyKYC(
+                            final idBytes = await File(idPhotoFile!.path).readAsBytes();
+                            final selfieBytes = await File(selfiePhotoFile!.path).readAsBytes();
+                            final res = await _api.verifyKYC(
                               docType,
                               docNumberCtrl.text.trim(),
                               selfieCaptured: selfieCaptured,
                               idPhotoCaptured: idCaptured,
+                              idImageBase64: base64Encode(idBytes),
+                              selfieImageBase64: base64Encode(selfieBytes),
                             );
-                          } catch (_) {}
-                          if (!mounted) return;
-                          setState(() {
-                            _kycSelfieVerified = true;
-                            _kycDocType = docType;
-                          });
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Biometric Selfie & Government ID verified! Tier 3 active.')),
-                            );
+                            if (!mounted) return;
+                            setState(() {
+                              _kycSelfieVerified = true;
+                              _kycDocType = docType;
+                            });
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              final prov = res['provider'] == 'DIDIT_LIVE' ? 'Didit Live Biometrics' : 'Tier 3';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Verified via $prov! Government ID & Live Selfie approved.')),
+                              );
+                            }
+                          } catch (e) {
+                            setModalState(() => submittingKyc = false);
+                            String msg = 'KYC verification failed. Please retake clear photos and try again.';
+                            try {
+                              final detail = (e as dynamic).response?.data?['detail'];
+                              if (detail != null) msg = '$detail';
+                            } catch (_) {}
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                            }
                           }
                         },
                 ),
