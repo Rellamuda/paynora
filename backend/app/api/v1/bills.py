@@ -192,14 +192,12 @@ def _credit_local_wallet(user_id: str, amount: Decimal) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Flutterwave bill payment
 # ---------------------------------------------------------------------------
-FLW_AIRTIME_BILLER = {"MTN": "MTN VTU", "AIRTEL": "AIRTEL VTU", "GLO": "GLO VTU", "9MOBILE": "9MOBILE VTU"}
-
-
 async def _call_flw_bills(customer: str, amount: Decimal, biller_type: str, reference: str) -> Optional[Dict[str, Any]]:
     """
-    Execute a live bill payment via Flutterwave.
-    Returns provider data on success, {"_error": msg} on rejection, or None when no live key is configured
-    (development mode only).
+    Execute a live bill payment via Flutterwave /v3/bills.
+    - Airtime uses type="AIRTIME"
+    - Data & Electricity use the exact item["biller_name"] from /v3/bill-categories
+    Returns provider data on success, {"_error": msg} on rejection, or None when no live key is configured.
     """
     if not flw_configured():
         return None
@@ -218,7 +216,10 @@ async def _call_flw_bills(customer: str, amount: Decimal, biller_type: str, refe
             data = resp.json()
         if resp.status_code in (200, 201) and data.get("status") == "success":
             return data.get("data") or {}
-        return {"_error": str(data.get("message") or "The bill provider rejected this payment.")}
+        msg = str(data.get("message") or "The bill provider rejected this payment.")
+        if "insufficient funds in your wallet" in msg.lower():
+            msg = "Flutterwave merchant wallet has insufficient NGN funds to vend this bill. Please top up your Flutterwave business wallet."
+        return {"_error": msg}
     except Exception as e:
         return {"_error": f"Could not reach the bill provider ({e}). You have not been charged."}
 
@@ -402,7 +403,7 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
     local_wallet = _debit_local_wallet(user_id, amount)
     tx_id = f"air_{uuid.uuid4().hex[:10]}"
 
-    flw_res = await _call_flw_bills(payload.phone_number, amount, FLW_AIRTIME_BILLER.get(net["operator_code"], "AIRTIME"), tx_id)
+    flw_res = await _call_flw_bills(payload.phone_number, amount, "AIRTIME", tx_id)
     if flw_res and "_error" in flw_res:
         _credit_local_wallet(user_id, amount)
         raise HTTPException(status_code=400, detail=f"{flw_res['_error']} Your wallet has been refunded.")
@@ -441,6 +442,9 @@ async def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user:
 
     net = await _resolve_network(payload.phone_number, payload.operator_code)
     catalog_item = _DATA_CATALOG_CACHE.get(payload.plan_id)
+    if not catalog_item and flw_configured():
+        await _live_data_plans(net["operator_code"])
+        catalog_item = _DATA_CATALOG_CACHE.get(payload.plan_id)
     if catalog_item and not any(k in str(catalog_item.get("name", "")).upper()
                                 for k in ({"9MOBILE": ("9MOBILE", "ETISALAT")}.get(net["operator_code"], (net["operator_code"],)))):
         raise HTTPException(
