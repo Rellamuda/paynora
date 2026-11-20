@@ -46,8 +46,7 @@ export default function LandingPage() {
   const [freezeSuccess, setFreezeSuccess] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
 
-  const apkDownloadUrl = 'https://github.com/Rellamuda/paynora/releases/download/latest/SendMoni.apk';
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(apkDownloadUrl)}`;
+  const apkDownloadUrl = 'http://13.48.25.254/SendMoni.apk';
 
   const handleFreeze = (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,79 +249,33 @@ export default function LandingPage() {
                 }}
               >
                 <span>📲</span>
-                <span>Download SendMoni APK (Android)</span>
-              </a>
-
-              <a
-                href="https://github.com/Rellamuda/paynora/releases/tag/latest"
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  padding: '16px 24px',
-                  background: isDark ? '#162444' : '#E2E8F0',
-                  color: isDark ? '#FFF' : '#0D253F',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  borderRadius: '14px',
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>📦</span>
-                <span>GitHub Releases</span>
+                <span>Download SendMoni App (Android APK)</span>
               </a>
             </div>
           </div>
 
-          {/* Hero Right QR Card */}
+          {/* Hero Right Mobile Security Card */}
           <div style={{
             flex: '0 1 360px',
             background: isDark ? '#0D1A30' : '#FFFFFF',
             borderRadius: '24px',
             padding: '32px',
-            textAlign: 'center',
+            textAlign: 'left',
             boxShadow: isDark ? '0 25px 60px rgba(0,0,0,0.6)' : '0 20px 40px -10px rgba(0,0,0,0.08)',
             border: `1px solid ${isDark ? '#1C2B4E' : '#E2E8F0'}`,
             margin: '0 auto'
           }}>
-            <div style={{ fontWeight: 800, fontSize: '18px', marginBottom: '8px', color: isDark ? '#FFF' : '#0D253F' }}>
-              Scan to Install on Your Phone
+            <div style={{ fontWeight: 800, fontSize: '18px', marginBottom: '10px', color: isDark ? '#FFF' : '#0D253F' }}>
+              SendMoni Mobile Vault
             </div>
-            <p style={{ fontSize: '12px', color: isDark ? '#94A3B8' : '#64748B', margin: '0 0 20px' }}>
-              Point your phone camera at this QR code to download the official SendMoni Android release directly.
+            <p style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#64748B', margin: '0 0 18px', lineHeight: 1.5 }}>
+              Available directly for Android while Google Play & Apple App Store listings are in review.
             </p>
-
-            <div style={{
-              background: '#FFFFFF',
-              padding: '14px',
-              borderRadius: '18px',
-              display: 'inline-block',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
-            }}>
-              <img
-                src={qrCodeUrl}
-                alt="Scan to Download SendMoni"
-                style={{ width: '180px', height: '180px', display: 'block' }}
-              />
-            </div>
-
-            <div style={{
-              marginTop: '20px',
-              padding: '10px 14px',
-              background: isDark ? 'rgba(255,255,255,0.04)' : '#F1F5F9',
-              borderRadius: '12px',
-              fontSize: '11px',
-              color: isDark ? '#CBD5E1' : '#475569',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}>
-              <span>✅</span>
-              <span>v1.0.1 Official Release • 22.8 MB • SHA256 Verified</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', fontWeight: 600 }}>
+              <div>✅ Local Currency + USD / GBP Wallets</div>
+              <div>✅ Instant App-to-App, Bank & MoMo Transfers</div>
+              <div>✅ Nigerian Airtime, Data & Electricity Bills</div>
+              <div>✅ Live Didit Biometric ID & Selfie KYC</div>
             </div>
           </div>
         </div>
