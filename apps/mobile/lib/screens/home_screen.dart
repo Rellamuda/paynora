@@ -9,6 +9,7 @@ import 'wallets_screen.dart';
 import 'exchange_screen.dart';
 import 'recipients_screen.dart';
 import 'transactions_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateTab;
@@ -40,12 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadDashboard();
   }
 
-  Future<void> _loadDashboard() async {
+  Future<void> _loadDashboard({bool retriedAfterRefresh = false}) async {
     setState(() => _loading = true);
     try {
-      final profile = await _api.getUserProfile().catchError((_) => <String, dynamic>{});
+      final profile = await _api.getUserProfile();
       final wallets = await _api.getWallets();
       final transfers = await _api.getTransfers().catchError((_) => <dynamic>[]);
+      if (!mounted) return;
       setState(() {
         if (profile.isNotEmpty) _profile = profile;
         _wallets = wallets.isNotEmpty
@@ -58,12 +60,37 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     } catch (e) {
+      int? statusCode;
+      try {
+        statusCode = (e as dynamic).response?.statusCode as int?;
+      } catch (_) {}
+
+      if (statusCode == 401 && !retriedAfterRefresh) {
+        final creds = await _api.getSavedCredentials();
+        if ((creds['email'] ?? '').isNotEmpty && (creds['password'] ?? '').isNotEmpty) {
+          try {
+            await _api.login(creds['email']!, creds['password']!);
+            return _loadDashboard(retriedAfterRefresh: true);
+          } catch (_) {}
+        }
+        await _api.logout();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
       setState(() {
-        _wallets = [
-          {'currency': 'NGN', 'available_balance': '0.00', 'symbol': '₦'},
-          {'currency': 'USD', 'available_balance': '0.00', 'symbol': '\$'},
-        ];
-        _transfers = [];
+        _wallets = _wallets.isNotEmpty
+            ? _wallets
+            : [
+                {'currency': 'NGN', 'available_balance': '0.00', 'symbol': '₦'},
+                {'currency': 'USD', 'available_balance': '0.00', 'symbol': '\$'},
+              ];
         _loading = false;
       });
     }

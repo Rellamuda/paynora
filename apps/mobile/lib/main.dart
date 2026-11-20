@@ -54,10 +54,67 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _checkAuth() async {
     final token = await _api.getAuthToken();
-    setState(() {
-      _loggedIn = token != null && token.isNotEmpty;
-      _checking = false;
-    });
+    if (token == null || token.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _loggedIn = false;
+          _checking = false;
+        });
+      }
+      return;
+    }
+
+    // Verify stored token is still valid on the server (avoid showing blank 0.00 on 401)
+    try {
+      await _api.getUserProfile();
+      if (mounted) {
+        setState(() {
+          _loggedIn = true;
+          _checking = false;
+        });
+      }
+      return;
+    } catch (e) {
+      int? statusCode;
+      try {
+        statusCode = (e as dynamic).response?.statusCode as int?;
+      } catch (_) {}
+
+      if (statusCode == 401) {
+        // Silently refresh session using saved credentials if available
+        final creds = await _api.getSavedCredentials();
+        final savedEmail = creds['email'] ?? '';
+        final savedPass = creds['password'] ?? '';
+        if (savedEmail.isNotEmpty && savedPass.isNotEmpty) {
+          try {
+            await _api.login(savedEmail, savedPass);
+            if (mounted) {
+              setState(() {
+                _loggedIn = true;
+                _checking = false;
+              });
+            }
+            return;
+          } catch (_) {}
+        }
+        await _api.logout();
+        if (mounted) {
+          setState(() {
+            _loggedIn = false;
+            _checking = false;
+          });
+        }
+        return;
+      }
+
+      // Network offline: keep logged in so user can retry on Home
+      if (mounted) {
+        setState(() {
+          _loggedIn = true;
+          _checking = false;
+        });
+      }
+    }
   }
 
   @override
