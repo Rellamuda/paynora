@@ -25,14 +25,32 @@ class ApiService {
     await _storage.delete(key: 'jwt_token');
   }
 
+  Future<void> saveCredentials(String email, String password) async {
+    await _storage.write(key: 'saved_login_email', value: email);
+    await _storage.write(key: 'saved_login_password', value: password);
+  }
+
+  Future<Map<String, String>> getSavedCredentials() async {
+    final email = await _storage.read(key: 'saved_login_email') ?? '';
+    final password = await _storage.read(key: 'saved_login_password') ?? '';
+    return {'email': email, 'password': password};
+  }
+
+  Future<void> clearSavedCredentials() async {
+    await _storage.delete(key: 'saved_login_email');
+    await _storage.delete(key: 'saved_login_password');
+  }
+
   Future<Map<String, dynamic>> deleteAccount() async {
     final headers = await _authHeaders();
     try {
       final res = await _dio.delete('/auth/account', options: Options(headers: headers));
       await logout();
+      await clearSavedCredentials();
       return res.data;
     } catch (_) {
       await logout();
+      await clearSavedCredentials();
       return {'status': 'DELETED'};
     }
   }
@@ -84,6 +102,7 @@ class ApiService {
     });
     if (res.data['access_token'] != null) {
       await setAuthToken(res.data['access_token']);
+      await saveCredentials(email, password);
     }
     return res.data;
   }

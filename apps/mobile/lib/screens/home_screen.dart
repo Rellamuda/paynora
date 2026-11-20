@@ -174,8 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = ThemeNotifier.instance.isDarkMode;
 
     final firstName = (_profile?['first_name'] ?? '').toString().trim();
-    final lastName = (_profile?['last_name'] ?? '').toString().trim();
-    final ownerName = '$firstName $lastName'.trim();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -191,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                ownerName.isNotEmpty ? 'Hi, $ownerName' : 'Hi there',
+                firstName.isNotEmpty ? 'Hi $firstName' : 'Hi there',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18, letterSpacing: -0.3),
               ),

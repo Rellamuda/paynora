@@ -95,6 +95,20 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _isSignUp = widget.initialIsSignUp;
     _selectedCountry = _countries.first;
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final creds = await _api.getSavedCredentials();
+      if (!mounted) return;
+      if ((creds['email'] ?? '').isNotEmpty) {
+        _loginEmailCtrl.text = creds['email']!;
+      }
+      if ((creds['password'] ?? '').isNotEmpty) {
+        _loginPassCtrl.text = creds['password']!;
+      }
+    } catch (_) {}
   }
 
   @override
