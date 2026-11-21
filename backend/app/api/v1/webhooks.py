@@ -33,11 +33,7 @@ def _parse_forward_urls(raw: str) -> List[str]:
 
 
 def _resolve_user_id_for_paystack(data: Dict[str, Any]) -> Optional[str]:
-    meta = data.get("metadata") or {}
-    if isinstance(meta, dict) and meta.get("user_id"):
-        return str(meta["user_id"])
-
-    # Match Dedicated Virtual Account (NUBAN) inbound transfer
+    # 1. Match Dedicated Virtual Account (NUBAN) inbound transfer owned by SendMoni
     auth = data.get("authorization") or {}
     nuban = auth.get("receiver_bank_account_number")
     if nuban:
@@ -46,33 +42,26 @@ def _resolve_user_id_for_paystack(data: Dict[str, Any]) -> Optional[str]:
         if uid:
             return uid
 
-    # Fallback: match customer email in SendMoni UserStore
-    cust = data.get("customer") or {}
-    email = cust.get("email")
-    if email:
-        from app.auth.store import UserStore
-        user = UserStore.get_by_email(str(email))
-        if user:
-            return user["user_id"]
+    # 2. Match explicit SendMoni checkout metadata (never blindly match by email across sibling apps)
+    meta = data.get("metadata") or {}
+    if isinstance(meta, dict) and str(meta.get("user_id", "")).startswith("usr_"):
+        return str(meta["user_id"])
+
     return None
 
 
 def _resolve_user_id_for_flutterwave(data: Dict[str, Any]) -> Optional[str]:
-    meta = data.get("meta") or {}
-    if isinstance(meta, dict) and meta.get("user_id"):
-        return str(meta["user_id"])
-
+    # 1. Match SendMoni permanent Virtual Account transfers (tx_ref = sm_va_<user_id>)
     tx_ref = str(data.get("tx_ref") or "")
     if tx_ref.startswith("sm_va_"):
         return tx_ref[len("sm_va_"):]
 
-    cust = data.get("customer") or {}
-    email = cust.get("email")
-    if email:
-        from app.auth.store import UserStore
-        user = UserStore.get_by_email(str(email))
-        if user:
-            return user["user_id"]
+    # 2. Match explicit SendMoni checkout metadata (never blindly match by email across sibling apps)
+    meta = data.get("meta") or {}
+    if isinstance(meta, dict) and str(meta.get("user_id", "")).startswith("usr_"):
+        if tx_ref.startswith(("FLW-", "pn_", "sm_")):
+            return str(meta["user_id"])
+
     return None
 
 
@@ -104,7 +93,13 @@ async def handle_provider_webhook(
     if provider_name == "flutterwave":
         secret_hash = request.headers.get("verif-hash")
         expected_hash = settings.FLW_WEBHOOK_HASH
-        if expected_hash and secret_hash != expected_hash:
+        fwd_urls_check = _parse_forward_urls(settings.FLW_FORWARD_URLS)
+        # When forwarding to a sibling app that owns the Flutterwave secret hash,
+        # require verif-hash header to be present without rejecting the sibling's hash.
+        if fwd_urls_check:
+            if not secret_hash:
+                raise HTTPException(status_code=400, detail="Missing Flutterwave verification hash")
+        elif expected_hash and secret_hash != expected_hash:
             raise HTTPException(status_code=400, detail="Invalid Flutterwave verification hash")
 
     elif provider_name == "paystack":
