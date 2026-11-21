@@ -57,10 +57,29 @@ class ProvisionVirtualAccountPayload(BaseModel):
     bvn: str | None = None
 
 @router.get("/virtual-account")
-def get_my_virtual_account(current_user: dict = Depends(get_current_user)):
-    """Return the user's assigned real Nigerian bank account number (NUBAN), if provisioned."""
-    from app.providers.virtual_accounts import get_user_virtual_account
+async def get_my_virtual_account(current_user: dict = Depends(get_current_user)):
+    """Return the user's assigned real Nigerian bank account number (NUBAN), auto-provisioning via Paystack DVA if available."""
+    from app.providers.virtual_accounts import get_user_virtual_account, provision_virtual_account
+    from app.auth.store import persist_users_db
+
     va = get_user_virtual_account(current_user["user_id"])
+    if not va and (current_user.get("country_iso") or "NG").upper() == "NG":
+        try:
+            res = await provision_virtual_account(
+                user=current_user,
+                preferred_provider="PAYSTACK",
+                preferred_bank="titan-paystack",
+            )
+            if res.get("status") == "SUCCESS" and res.get("account_number"):
+                current_user["account_number"] = res["account_number"]
+                current_user["bank_name"] = res.get("bank_name")
+                current_user["virtual_account_assigned"] = True
+                current_user["virtual_account_provider"] = res.get("provider")
+                persist_users_db()
+                va = res
+        except Exception:
+            pass
+
     if not va:
         return {"assigned": False, "message": "No Dedicated Virtual Account provisioned yet."}
     return va
@@ -72,6 +91,8 @@ async def create_my_virtual_account(
 ):
     """Provision a real 10-digit Nigerian NUBAN via Paystack (Paystack-Titan / Wema) or Flutterwave."""
     from app.providers.virtual_accounts import provision_virtual_account
+    from app.auth.store import persist_users_db
+
     res = await provision_virtual_account(
         user=current_user,
         preferred_provider=payload.provider,
@@ -80,6 +101,12 @@ async def create_my_virtual_account(
     )
     if res.get("status") != "SUCCESS":
         raise HTTPException(status_code=400, detail=res.get("message", "Could not create Dedicated Virtual Account."))
+    if res.get("account_number"):
+        current_user["account_number"] = res["account_number"]
+        current_user["bank_name"] = res.get("bank_name")
+        current_user["virtual_account_assigned"] = True
+        current_user["virtual_account_provider"] = res.get("provider")
+        persist_users_db()
     return res
 
 @router.get("/gateway-routing")

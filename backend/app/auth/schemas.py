@@ -8,6 +8,7 @@ class UserRegisterRequest(BaseModel):
     phone: str = Field(..., min_length=5)
     country_iso: str = Field("NG", min_length=2, max_length=2)
     password: str = Field(..., min_length=8)
+    bvn: Optional[str] = None
 
 class UserLoginRequest(BaseModel):
     email: EmailStr
@@ -26,6 +27,9 @@ class TokenResponse(BaseModel):
     last_name: Optional[str] = None
     country_iso: Optional[str] = "NG"
     account_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    virtual_account_assigned: bool = False
+    virtual_account_provider: Optional[str] = None
     paynora_tag: Optional[str] = None
     wallet_address: Optional[str] = None
     roles: List[str]
@@ -38,6 +42,9 @@ class UserProfileResponse(BaseModel):
     phone: str
     country_iso: str
     account_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    virtual_account_assigned: bool = False
+    virtual_account_provider: Optional[str] = None
     paynora_tag: Optional[str] = None
     wallet_address: Optional[str] = None
     is_email_verified: bool

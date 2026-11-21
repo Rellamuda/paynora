@@ -336,7 +336,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const Icon(Icons.account_balance_wallet_outlined, color: Colors.white70, size: 14),
                                     const SizedBox(width: 5),
                                     Text(
-                                      'Acc No: ${_profile?['account_number'] ?? '9012345678'}',
+                                      (_profile?['virtual_account_assigned'] == true && (_profile?['bank_name'] ?? '').toString().isNotEmpty)
+                                          ? '${_profile!['bank_name']}: ${_profile?['account_number']}'
+                                          : 'Acc No: ${_profile?['account_number'] ?? '9012345678'}',
                                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
                                     ),
                                     const SizedBox(width: 4),

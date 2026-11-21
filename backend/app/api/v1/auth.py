@@ -14,6 +14,24 @@ from app.events.kafka import event_publisher
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+def _sync_virtual_account_to_user(user: dict) -> dict:
+    try:
+        from app.providers.virtual_accounts import get_user_virtual_account
+        va = get_user_virtual_account(user.get("user_id", ""))
+        if va and va.get("account_number"):
+            user["account_number"] = va["account_number"]
+            user["bank_name"] = va.get("bank_name")
+            user["virtual_account_assigned"] = True
+            user["virtual_account_provider"] = va.get("provider")
+            return user
+    except Exception:
+        pass
+    user.setdefault("bank_name", None)
+    user.setdefault("virtual_account_assigned", False)
+    user.setdefault("virtual_account_provider", None)
+    return user
+
+
 def _ensure_user_identifiers(user: dict) -> dict:
     if not user.get("account_number") or not user.get("paynora_tag") or not user.get("wallet_address"):
         ids = generate_account_identifiers(
@@ -31,7 +49,7 @@ def _ensure_user_identifiers(user: dict) -> dict:
     user.setdefault("is_phone_verified", True)
     user.setdefault("kyc_status", "VERIFIED")
     user.setdefault("account_capabilities", ["VIEW_ACCOUNT", "SEND_MONEY", "RECEIVE_MONEY", "CONVERT_CURRENCY", "PAY_BILLS"])
-    return user
+    return _sync_virtual_account_to_user(user)
 
 
 def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
@@ -73,7 +91,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
 
 @router.post("/register", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)
-def register_user(payload: UserRegisterRequest):
+async def register_user(payload: UserRegisterRequest):
     try:
         user = UserStore.create_user(
             first_name=payload.first_name,
@@ -83,10 +101,47 @@ def register_user(payload: UserRegisterRequest):
             country_iso=payload.country_iso,
             password=payload.password
         )
+        # Immediately auto-provision a real Nigerian Dedicated Virtual Account (NUBAN) on onboarding
+        if (user.get("country_iso") or "NG").upper() == "NG":
+            try:
+                from app.providers.virtual_accounts import provision_virtual_account
+                clean_bvn = (payload.bvn or "").strip()
+                va_res = None
+                if len(clean_bvn) == 11 and clean_bvn.isdigit():
+                    va_res = await provision_virtual_account(
+                        user=user,
+                        preferred_provider="FLUTTERWAVE",
+                        preferred_bank="titan-paystack",
+                        bvn=clean_bvn,
+                    )
+                else:
+                    va_res = await provision_virtual_account(
+                        user=user,
+                        preferred_provider="PAYSTACK",
+                        preferred_bank="titan-paystack",
+                    )
+                    if va_res.get("status") != "SUCCESS":
+                        va_res = await provision_virtual_account(
+                            user=user,
+                            preferred_provider="PAYSTACK",
+                            preferred_bank="wema-bank",
+                        )
+                if va_res and va_res.get("status") == "SUCCESS" and va_res.get("account_number"):
+                    user["account_number"] = va_res["account_number"]
+                    user["bank_name"] = va_res.get("bank_name")
+                    user["virtual_account_assigned"] = True
+                    user["virtual_account_provider"] = va_res.get("provider")
+                    persist_users_db()
+            except Exception:
+                pass
+
+        _ensure_user_identifiers(user)
         event_publisher.publish_event("UserCreated", {
             "user_id": user["user_id"],
             "email": user["email"],
             "account_number": user["account_number"],
+            "bank_name": user.get("bank_name"),
+            "virtual_account_assigned": user.get("virtual_account_assigned", False),
             "paynora_tag": user["paynora_tag"],
             "wallet_address": user["wallet_address"],
         })
@@ -136,6 +191,9 @@ def login(payload: UserLoginRequest):
         "last_name": user["last_name"],
         "country_iso": user.get("country_iso", "NG"),
         "account_number": user["account_number"],
+        "bank_name": user.get("bank_name"),
+        "virtual_account_assigned": bool(user.get("virtual_account_assigned", False)),
+        "virtual_account_provider": user.get("virtual_account_provider"),
         "paynora_tag": user["paynora_tag"],
         "wallet_address": user["wallet_address"],
         "roles": user["roles"]

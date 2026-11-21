@@ -77,6 +77,32 @@ async def submit_identity_verification(
     current_user["kyc_status"] = new_state
     new_capabilities = AccountCapabilityPolicy.get_capabilities_for_state(new_state)
     current_user["account_capabilities"] = new_capabilities
+
+    # Auto-provision a permanent Nigerian NUBAN if verified with BVN and none assigned yet
+    assigned_va = None
+    if (current_user.get("country_iso") or "NG").upper() == "NG":
+        try:
+            from app.providers.virtual_accounts import get_user_virtual_account, provision_virtual_account
+            existing_va = get_user_virtual_account(user_id)
+            doc_num = (payload.document_number or "").strip()
+            if not existing_va and payload.document_type.upper() == "BVN" and len(doc_num) == 11 and doc_num.isdigit():
+                va_res = await provision_virtual_account(
+                    user=current_user,
+                    preferred_provider="FLUTTERWAVE",
+                    preferred_bank="titan-paystack",
+                    bvn=doc_num,
+                )
+                if va_res.get("status") == "SUCCESS" and va_res.get("account_number"):
+                    current_user["account_number"] = va_res["account_number"]
+                    current_user["bank_name"] = va_res.get("bank_name")
+                    current_user["virtual_account_assigned"] = True
+                    current_user["virtual_account_provider"] = va_res.get("provider")
+                    assigned_va = va_res
+            elif existing_va:
+                assigned_va = existing_va
+        except Exception:
+            pass
+
     persist_users_db()
 
     event_publisher.publish_event("KYCCompleted", {
@@ -95,5 +121,6 @@ async def submit_identity_verification(
         "liveness_score": kyc_result.get("liveness_score", 0.99 if payload.selfie_captured else 0.0),
         "face_match_score": kyc_result.get("face_match_score", 0.98 if payload.selfie_captured else 0.0),
         "capabilities": new_capabilities,
+        "virtual_account": assigned_va,
         "verification_result": kyc_result
     }

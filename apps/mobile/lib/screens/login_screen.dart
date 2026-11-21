@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 import '../main.dart';
@@ -31,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _signUpEmailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _signUpPassCtrl = TextEditingController();
+  final _bvnCtrl = TextEditingController();
   bool _obscureSignUpPass = true;
 
   // Global Country of Residence selection for registration (Strictly 2 Wallets: Local + USD, or USD + GBP for US)
@@ -120,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _signUpEmailCtrl.dispose();
     _phoneCtrl.dispose();
     _signUpPassCtrl.dispose();
+    _bvnCtrl.dispose();
     super.dispose();
   }
 
@@ -164,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _signUpEmailCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
     final password = _signUpPassCtrl.text.trim();
+    final bvn = _bvnCtrl.text.trim();
 
     if (fName.isEmpty || lName.isEmpty) {
       setState(() => _errorMessage = 'Please enter your first and last name.');
@@ -181,6 +185,10 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _errorMessage = 'Password must be at least 8 characters long.');
       return;
     }
+    if (bvn.isNotEmpty && (bvn.length != 11 || !RegExp(r'^\d{11}$').hasMatch(bvn))) {
+      setState(() => _errorMessage = 'BVN must be exactly 11 digits (or leave blank to set up later).');
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -192,18 +200,25 @@ class _LoginScreenState extends State<LoginScreen> {
       final cleanPhone = phone.replaceAll(RegExp(r'^0+'), '');
       final fullPhone = '${_selectedCountry['dial']}$cleanPhone';
 
-      final regRes = await _api.register({
+      final regPayload = <String, dynamic>{
         'first_name': fName,
         'last_name': lName,
         'email': email.toLowerCase(),
         'phone': fullPhone,
         'country_iso': _selectedCountry['code'],
         'password': password,
-      });
+      };
+      if (_selectedCountry['code'] == 'NG' && bvn.isNotEmpty) {
+        regPayload['bvn'] = bvn;
+      }
+
+      final regRes = await _api.register(regPayload);
 
       // Auto login after registration
       final loginRes = await _api.login(email.toLowerCase(), password);
       final accNo = loginRes['account_number'] ?? regRes['account_number'] ?? '';
+      final bankName = loginRes['bank_name'] ?? regRes['bank_name'];
+      final vaAssigned = (loginRes['virtual_account_assigned'] == true) || (regRes['virtual_account_assigned'] == true);
       final tag = loginRes['paynora_tag'] ?? regRes['paynora_tag'] ?? '';
       final addr = loginRes['wallet_address'] ?? regRes['wallet_address'] ?? '';
 
@@ -224,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Welcome $fName $lName! Your official SendMoni identifiers have been assigned:'),
+                Text('Welcome $fName $lName! Your official SendMoni identifiers are ready:'),
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
@@ -237,8 +252,47 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('10-Digit Account Number: $accNo', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
-                      const SizedBox(height: 6),
+                      if (vaAssigned && bankName != null) ...[
+                        Row(
+                          children: [
+                            const Icon(Icons.account_balance, size: 15, color: PayNoraColors.brandSecondary),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text('Bank: $bankName', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: PayNoraColors.brandSecondary)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              vaAssigned ? 'Live NUBAN: $accNo' : 'Account Number: $accNo',
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                            ),
+                          ),
+                          IconButton(
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.copy_rounded, size: 18, color: PayNoraColors.brandSecondary),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: '$accNo'));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Account Number copied: $accNo')),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      if (vaAssigned) ...[
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Transfer from OPay, GTBank, Access, Zenith, or Kuda — your SendMoni NGN wallet credits automatically!',
+                          style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
                       Text('SendMoni Tag / Code: $tag', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                       const SizedBox(height: 6),
                       Text('Global Wallet Address: $addr', style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -798,6 +852,26 @@ class _LoginScreenState extends State<LoginScreen> {
             fillColor: isDark ? PayNoraColors.darkSurface : Colors.white,
           ),
         ),
+        if (_selectedCountry['code'] == 'NG') ...[
+          const SizedBox(height: 14),
+          TextField(
+            controller: _bvnCtrl,
+            keyboardType: TextInputType.number,
+            maxLength: 11,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'BVN (For Instant Bank Account Number / NUBAN)',
+              hintText: '11-digit BVN (optional — can also add later)',
+              helperText: 'CBN requires BVN to issue your live Nigerian bank NUBAN immediately',
+              counterText: '',
+              prefixIcon: const Icon(Icons.account_balance_outlined),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              filled: true,
+              fillColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
 
         // Double Currency Provisioning Notice
