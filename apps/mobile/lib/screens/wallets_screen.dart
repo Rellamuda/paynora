@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../config/gateway_routing.dart';
@@ -16,6 +17,7 @@ class WalletsScreen extends StatefulWidget {
 class _WalletsScreenState extends State<WalletsScreen> {
   final ApiService _api = ApiService();
   List<dynamic> _wallets = [];
+  Map<String, dynamic>? _virtualAccount;
   bool _loading = true;
 
   final List<Map<String, String>> _availableCurrencies = [
@@ -41,6 +43,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
     setState(() => _loading = true);
     try {
       final res = await _api.getWallets();
+      final va = await _api.getVirtualAccount().catchError((_) => <String, dynamic>{});
       setState(() {
         _wallets = res.isNotEmpty
             ? res.take(2).toList()
@@ -48,6 +51,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 {'currency': 'NGN', 'available_balance': '0.00'},
                 {'currency': 'USD', 'available_balance': '0.00'},
               ];
+        _virtualAccount = (va['assigned'] == true && va['account_number'] != null) ? va : null;
         _loading = false;
       });
     } catch (e) {
@@ -59,6 +63,109 @@ class _WalletsScreenState extends State<WalletsScreen> {
         _loading = false;
       });
     }
+  }
+
+  void _showProvisionVirtualAccountDialog() {
+    final isDark = ThemeNotifier.instance.isDarkMode;
+    String selectedOption = 'PAYSTACK_TITAN';
+    final bvnCtrl = TextEditingController();
+    bool creating = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Get Your Bank Account Number (NUBAN)', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+              const SizedBox(height: 6),
+              const Text(
+                'Receive bank transfers directly from OPay, GTBank, Access, Zenith, Kuda, or any Nigerian bank straight into your SendMoni NGN wallet.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedOption,
+                decoration: InputDecoration(
+                  labelText: 'Issuing Partner Bank',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                dropdownColor: isDark ? PayNoraColors.darkSurface : Colors.white,
+                items: const [
+                  DropdownMenuItem(value: 'PAYSTACK_TITAN', child: Text('Paystack-Titan (Recommended · Best on OPay)')),
+                  DropdownMenuItem(value: 'PAYSTACK_WEMA', child: Text('Wema Bank (via Paystack)')),
+                  DropdownMenuItem(value: 'FLUTTERWAVE', child: Text('Flutterwave Permanent Virtual Account')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setModalState(() => selectedOption = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: bvnCtrl,
+                keyboardType: TextInputType.number,
+                maxLength: 11,
+                decoration: InputDecoration(
+                  labelText: selectedOption == 'FLUTTERWAVE' ? '11-Digit BVN (Required by CBN)' : '11-Digit BVN (Optional failover)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PayNoraColors.brandSecondary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: creating
+                      ? null
+                      : () async {
+                          setModalState(() => creating = true);
+                          try {
+                            final provider = selectedOption == 'FLUTTERWAVE' ? 'FLUTTERWAVE' : 'PAYSTACK';
+                            final bank = selectedOption == 'PAYSTACK_WEMA' ? 'wema-bank' : 'titan-paystack';
+                            final va = await _api.createVirtualAccount(
+                              provider: provider,
+                              preferredBank: bank,
+                              bvn: bvnCtrl.text.trim(),
+                            );
+                            if (!mounted) return;
+                            setState(() => _virtualAccount = va);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Bank Account Ready: ${va['bank_name']} • ${va['account_number']}')),
+                            );
+                          } catch (e) {
+                            setModalState(() => creating = false);
+                            String msg = 'Could not generate bank account number right now.';
+                            try {
+                              final detail = (e as dynamic).response?.data?['detail'];
+                              if (detail != null) msg = '$detail';
+                            } catch (_) {}
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                            }
+                          }
+                        },
+                  child: creating
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Generate Bank Account Number', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _gatewayTile({
@@ -503,6 +610,96 @@ class _WalletsScreenState extends State<WalletsScreen> {
                       ),
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Dedicated Bank Account (NUBAN) Card for OPay / Bank Transfers
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? PayNoraColors.darkCard : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: PayNoraColors.brandSecondary.withOpacity(0.4)),
+                  ),
+                  child: _virtualAccount != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('RECEIVE FROM OPAY / ANY BANK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: PayNoraColors.brandSecondary)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(color: PayNoraColors.successBg, borderRadius: BorderRadius.circular(6)),
+                                  child: Text('${_virtualAccount!['provider'] ?? 'NUBAN'}', style: const TextStyle(color: PayNoraColors.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('${_virtualAccount!['bank_name']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${_virtualAccount!['account_number']}',
+                                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: 1.2, color: PayNoraColors.brandSecondary),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text('${_virtualAccount!['account_name'] ?? ''}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: '${_virtualAccount!['account_number']}'));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Copied ${_virtualAccount!['bank_name']} account: ${_virtualAccount!['account_number']}')),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.copy_rounded, color: PayNoraColors.brandSecondary),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Transfer Naira from OPay or any Nigerian bank to this account number — your NGN wallet credits automatically.',
+                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('RECEIVE BANK TRANSFERS (OPAY / ALL BANKS)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: PayNoraColors.brandSecondary)),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Generate your own permanent 10-digit Nigerian bank account number (Paystack-Titan / Wema / Flutterwave) to fund your wallet straight from OPay.',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: PayNoraColors.brandSecondary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: _showProvisionVirtualAccountDialog,
+                                icon: const Icon(Icons.account_balance_rounded, size: 18),
+                                label: const Text('Get My Bank Account Number (NUBAN)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
 
                 const SizedBox(height: 18),

@@ -203,6 +203,31 @@ class ApiService {
     return res.data;
   }
 
+  // Dedicated Virtual Bank Account (NUBAN via Paystack-Titan / Wema / Flutterwave)
+  Future<Map<String, dynamic>> getVirtualAccount() async {
+    final headers = await _authHeaders();
+    final res = await _dio.get('/wallets/virtual-account', options: Options(headers: headers));
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> createVirtualAccount({
+    String provider = 'PAYSTACK',
+    String preferredBank = 'titan-paystack',
+    String? bvn,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _dio.post(
+      '/wallets/virtual-account',
+      data: {
+        'provider': provider,
+        'preferred_bank': preferredBank,
+        if (bvn != null && bvn.trim().isNotEmpty) 'bvn': bvn.trim(),
+      },
+      options: Options(headers: headers),
+    );
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> convertWallet(
     String fromCurrency,
     String toCurrency,

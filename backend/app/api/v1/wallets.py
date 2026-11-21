@@ -51,6 +51,37 @@ class VerifyDepositPayload(BaseModel):
     gateway: str
     currency: str
 
+class ProvisionVirtualAccountPayload(BaseModel):
+    provider: str = "PAYSTACK"  # PAYSTACK | FLUTTERWAVE
+    preferred_bank: str = "titan-paystack"  # titan-paystack | wema-bank
+    bvn: str | None = None
+
+@router.get("/virtual-account")
+def get_my_virtual_account(current_user: dict = Depends(get_current_user)):
+    """Return the user's assigned real Nigerian bank account number (NUBAN), if provisioned."""
+    from app.providers.virtual_accounts import get_user_virtual_account
+    va = get_user_virtual_account(current_user["user_id"])
+    if not va:
+        return {"assigned": False, "message": "No Dedicated Virtual Account provisioned yet."}
+    return va
+
+@router.post("/virtual-account")
+async def create_my_virtual_account(
+    payload: ProvisionVirtualAccountPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """Provision a real 10-digit Nigerian NUBAN via Paystack (Paystack-Titan / Wema) or Flutterwave."""
+    from app.providers.virtual_accounts import provision_virtual_account
+    res = await provision_virtual_account(
+        user=current_user,
+        preferred_provider=payload.provider,
+        preferred_bank=payload.preferred_bank,
+        bvn=payload.bvn,
+    )
+    if res.get("status") != "SUCCESS":
+        raise HTTPException(status_code=400, detail=res.get("message", "Could not create Dedicated Virtual Account."))
+    return res
+
 @router.get("/gateway-routing")
 def gateway_routing_table():
     """Smart gateway routing table: recommended/supported gateway and limits per currency."""

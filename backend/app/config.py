@@ -58,4 +58,8 @@ class Settings(BaseSettings):
     # Live Biometric KYC & ID Verification (Didit v3)
     DIDIT_API_KEY: str = os.getenv("DIDIT_API_KEY", "")
 
+    # Multi-App Webhook Forwarder (comma-separated URLs for Knot, JobHub, Properties & Autos)
+    PAYSTACK_FORWARD_URLS: str = os.getenv("PAYSTACK_FORWARD_URLS", "")
+    FLW_FORWARD_URLS: str = os.getenv("FLW_FORWARD_URLS", "")
+
 settings = Settings()
