@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../theme/design_tokens.dart';
 
-/// Bills & Utilities (Nigeria Only): Airtime, Mobile Data, Electricity tokens,
-/// 1-Tap 100% Bill Reversal & 90% Back-to-Cash Converter.
+/// Bills & Utilities (Nigeria Only): Airtime, Mobile Data, and Electricity tokens.
 /// Uses live backend network verification (ported-number safe) and live Flutterwave meter validation.
 class BillsScreen extends StatefulWidget {
   final int initialTab;
@@ -44,7 +43,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   Timer? _airDebounce;
   final _airPhone = TextEditingController();
   final _airAmount = TextEditingController();
-  List<Map<String, dynamic>> _recentAirtime = [];
 
   // Data
   String? _dataOperator;
@@ -72,33 +70,17 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
   bool _validating = false;
   Timer? _meterDebounce;
 
-  // To-Cash Converter (90% payout for AIRTIME, DATA, or ELECTRICITY)
-  String _a2cCategory = 'AIRTIME';
-  String? _a2cOperator;
-  String? _a2cOperatorName;
-  String? _a2cOperatorIcon;
-  bool _a2cVerified = false;
-  bool? _a2cPorted;
-  String? _a2cDetectMsg;
-  bool _a2cDetecting = false;
-  Timer? _a2cDebounce;
-  final _a2cPhone = TextEditingController();
-  final _a2cAmount = TextEditingController(text: '2000');
-  final _a2cSharePin = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this, initialIndex: widget.initialTab.clamp(0, 3));
+    _tabs = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.clamp(0, 2));
     _initUserCountryAndCatalog();
-    _loadRecentAirtime();
   }
 
   @override
   void dispose() {
     _airDebounce?.cancel();
     _dataDebounce?.cancel();
-    _a2cDebounce?.cancel();
     _meterDebounce?.cancel();
     _tabs.dispose();
     _airPhone.dispose();
@@ -106,9 +88,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     _dataPhone.dispose();
     _meterNo.dispose();
     _powerAmount.dispose();
-    _a2cPhone.dispose();
-    _a2cAmount.dispose();
-    _a2cSharePin.dispose();
     super.dispose();
   }
 
@@ -264,59 +243,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     });
   }
 
-  void _onA2CPhoneChanged(String val) {
-    _a2cDebounce?.cancel();
-    final digits = val.replaceAll(RegExp(r'\D'), '');
-    if (_a2cCategory == 'ELECTRICITY') {
-      setState(() {
-        _a2cOperator = null;
-        _a2cOperatorName = null;
-        _a2cOperatorIcon = '⚡';
-        _a2cVerified = false;
-        _a2cDetectMsg = digits.length >= 10
-            ? 'Electricity company will be verified against your meter record.'
-            : null;
-      });
-      return;
-    }
-    if (digits.length < 10) {
-      setState(() {
-        _a2cOperator = null;
-        _a2cOperatorName = null;
-        _a2cOperatorIcon = null;
-        _a2cVerified = false;
-        _a2cPorted = null;
-        _a2cDetectMsg = null;
-        _a2cDetecting = false;
-      });
-      return;
-    }
-    _a2cDebounce = Timer(const Duration(milliseconds: 350), () {
-      _detectNetworkRemote(
-        rawPhone: val,
-        onLoading: (l) => setState(() => _a2cDetecting = l),
-        onResult: (res) {
-          setState(() {
-            if (res['detected'] == true) {
-              _a2cOperator = res['operator_code']?.toString();
-              _a2cOperatorName = res['operator_name']?.toString();
-              _a2cOperatorIcon = res['icon']?.toString() ?? '📶';
-              _a2cVerified = res['verified'] == true;
-              _a2cPorted = res['ported'] is bool ? res['ported'] as bool : null;
-              _a2cDetectMsg = res['message']?.toString();
-            } else {
-              _a2cOperator = null;
-              _a2cOperatorName = null;
-              _a2cVerified = false;
-              _a2cPorted = null;
-              _a2cDetectMsg = res['message']?.toString();
-            }
-          });
-        },
-      );
-    });
-  }
-
   Future<void> _pickNetworkManually({
     required void Function(String code, String name, String icon) onPicked,
   }) async {
@@ -351,17 +277,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     if (picked != null) {
       onPicked(picked['code']!, picked['name']!, picked['icon'] ?? '📶');
     }
-  }
-
-  Future<void> _loadRecentAirtime() async {
-    try {
-      final list = await _api.getRecentAirtimePurchases();
-      if (mounted && list.isNotEmpty) {
-        setState(() {
-          _recentAirtime = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        });
-      }
-    } catch (_) {}
   }
 
   Future<void> _loadPlans(String operatorCode) async {
@@ -433,16 +348,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       final txId = '${res['transaction_id']}';
       final usedOp = '${res['operator'] ?? _airOperator}';
       final usedName = '${res['operator_name'] ?? _airOperatorName ?? usedOp}';
-      setState(() {
-        _recentAirtime.insert(0, {
-          'transaction_id': txId,
-          'category': 'AIRTIME',
-          'operator': usedOp,
-          'phone_number': _airPhone.text,
-          'amount': '${res['amount']}',
-          'reversed': false,
-        });
-      });
       _showReceipt(
         'Airtime Sent',
         [
@@ -452,78 +357,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           ['Amount', '$_symbol${res['amount']}'],
           if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
           ['Reference', txId],
-        ],
-        reversibleAirtimeTxId: txId,
-        reversibleAmount: '${res['amount']}',
-        reversibleOperator: usedOp,
-      );
-    } catch (e) {
-      _snack(_errMsg(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _reverseAirtimePurchase(String txId, String amount, String operatorCode) async {
-    setState(() => _busy = true);
-    try {
-      final res = await _api.reverseAirtime(txId);
-      setState(() {
-        for (final item in _recentAirtime) {
-          if (item['transaction_id'] == txId) {
-            item['reversed'] = true;
-          }
-        }
-      });
-      _showReceipt(
-        'Reversed to Cash',
-        [
-          ['Type', '100% Instant Reversal'],
-          ['Provider', operatorCode],
-          ['Cash Refunded', '+$_symbol${res['refunded_amount'] ?? amount}'],
-          if (res['wallet_balance_after'] != null) ['New Wallet Balance', '$_symbol${res['wallet_balance_after']}'],
-          ['Reference', txId],
-        ],
-      );
-    } catch (e) {
-      _snack(_errMsg(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _convertAirtimeToCash() async {
-    if (_a2cCategory == 'ELECTRICITY') {
-      if (_a2cPhone.text.replaceAll(RegExp(r'\D'), '').length < 10) {
-        return _snack('Enter a valid 10–13 digit Nigerian meter number.');
-      }
-    } else if (!_validNigerianPhone(_a2cPhone.text)) {
-      return _snack('Enter a valid 11-digit Nigerian phone number.');
-    }
-    final amt = double.tryParse(_a2cAmount.text) ?? 0;
-    if (amt <= 0) return _snack('Enter a valid amount to convert.');
-
-    setState(() => _busy = true);
-    try {
-      final res = await _api.convertAirtimeToCash(
-        phone: _a2cPhone.text.trim(),
-        operatorCode: _a2cOperator ?? (_a2cCategory == 'ELECTRICITY' ? 'ELECTRICITY' : 'MTN'),
-        airtimeAmount: amt.toStringAsFixed(2),
-        category: _a2cCategory,
-        sharePin: _a2cSharePin.text.trim().isEmpty ? null : _a2cSharePin.text.trim(),
-        countryIso: 'NG',
-      );
-      _showReceipt(
-        '$_a2cCategory Converted to Cash',
-        [
-          ['Category', _a2cCategory],
-          ['Verified Provider', '${res['operator_name'] ?? _a2cOperatorName ?? ''}'],
-          [_a2cCategory == 'ELECTRICITY' ? 'Meter' : 'Phone', _a2cPhone.text],
-          ['Value Converted', '$_symbol${res['airtime_amount']}'],
-          ['Conversion Fee (10%)', '-$_symbol${res['conversion_fee']}'],
-          ['Cash Credited (90%)', '+$_symbol${res['cash_credited']}'],
-          if (res['wallet_balance_after'] != null) ['New Wallet Balance', '$_symbol${res['wallet_balance_after']}'],
-          ['Reference', '${res['conversion_id']}'],
         ],
       );
     } catch (e) {
@@ -553,16 +386,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       final txId = '${res['transaction_id']}';
       final usedOp = '${res['operator'] ?? _dataOperator}';
       final usedName = '${res['operator_name'] ?? _dataOperatorName ?? usedOp}';
-      setState(() {
-        _recentAirtime.insert(0, {
-          'transaction_id': txId,
-          'category': 'DATA',
-          'operator': usedOp,
-          'phone_number': _dataPhone.text,
-          'amount': '${res['amount']}',
-          'reversed': false,
-        });
-      });
       _showReceipt(
         'Data Activated',
         [
@@ -573,9 +396,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           if (res['wallet_balance_after'] != null) ['New Balance', '$_symbol${res['wallet_balance_after']}'],
           ['Reference', txId],
         ],
-        reversibleAirtimeTxId: txId,
-        reversibleAmount: '${res['amount']}',
-        reversibleOperator: '$usedOp DATA',
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -665,16 +485,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       final txId = '${res['transaction_id']}';
       final usedDisco = '${res['disco'] ?? _disco ?? 'POWER'}';
       final usedDiscoName = '${res['disco_name'] ?? _discoName ?? usedDisco}';
-      setState(() {
-        _recentAirtime.insert(0, {
-          'transaction_id': txId,
-          'category': 'ELECTRICITY',
-          'operator': usedDisco,
-          'phone_number': _meterNo.text,
-          'amount': '${res['amount']}',
-          'reversed': false,
-        });
-      });
       _showReceipt(
         _meterType == 'PREPAID' ? 'Token Generated' : 'Bill Paid',
         [
@@ -687,9 +497,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
           ['Reference', txId],
         ],
         token: _meterType == 'PREPAID' ? '${res['token']}' : null,
-        reversibleAirtimeTxId: txId,
-        reversibleAmount: '${res['amount']}',
-        reversibleOperator: '$usedDisco ELECTRICITY',
       );
     } catch (e) {
       _snack(_errMsg(e));
@@ -702,9 +509,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
     String title,
     List<List<String>> rows, {
     String? token,
-    String? reversibleAirtimeTxId,
-    String? reversibleAmount,
-    String? reversibleOperator,
   }) {
     showModalBottomSheet(
       context: context,
@@ -755,32 +559,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                   ),
                 )),
             const SizedBox(height: 20),
-            if (reversibleAirtimeTxId != null) ...[
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _reverseAirtimePurchase(
-                      reversibleAirtimeTxId,
-                      reversibleAmount ?? '0.00',
-                      reversibleOperator ?? 'AIRTIME',
-                    );
-                  },
-                  icon: const Icon(Icons.replay_circle_filled_rounded, color: PayNoraColors.warning),
-                  label: Text(
-                    'Reverse to Cash (100% Refund · $_symbol${reversibleAmount ?? ''})',
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: PayNoraColors.warning),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: PayNoraColors.warning, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -822,7 +600,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                   Tab(icon: Icon(Icons.phone_in_talk), text: 'Airtime'),
                   Tab(icon: Icon(Icons.wifi), text: 'Data'),
                   Tab(icon: Icon(Icons.bolt), text: 'Electricity'),
-                  Tab(icon: Icon(Icons.currency_exchange), text: 'To Cash'),
                 ],
               ),
       ),
@@ -863,7 +640,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
                 _airtimeTab(isDark),
                 _dataTab(isDark),
                 _electricityTab(isDark),
-                _airtimeToCashTab(isDark),
               ],
             ),
     );
@@ -1038,17 +814,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
         'Buy $_symbol${_airAmount.text.isEmpty ? '0' : _airAmount.text} ${_airOperator ?? ''} Airtime',
         _buyAirtime,
       ),
-      const SizedBox(height: 14),
-      Center(
-        child: TextButton.icon(
-          onPressed: () => _tabs.animateTo(3),
-          icon: const Icon(Icons.currency_exchange, size: 16, color: PayNoraColors.brandSecondary),
-          label: const Text(
-            'Bought too much airtime? Reverse or Convert Airtime to Cash →',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: PayNoraColors.brandSecondary),
-          ),
-        ),
-      ),
     ]);
   }
 
@@ -1123,224 +888,6 @@ class _BillsScreenState extends State<BillsScreen> with SingleTickerProviderStat
       _payButton(
         _selectedPlan == null ? 'Enter Phone to Load Data Plans' : 'Buy ${_selectedPlan!['allowance']} for $_symbol${_selectedPlan!['amount']}',
         _buyData,
-      ),
-    ]);
-  }
-
-  Widget _airtimeToCashTab(bool isDark) {
-    final amt = double.tryParse(_a2cAmount.text) ?? 0.0;
-    final fee = amt * 0.10;
-    final cashPayout = amt * 0.90;
-
-    return ListView(padding: const EdgeInsets.all(20), children: [
-      if (_recentAirtime.isNotEmpty)
-        _card(isDark, [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _label('RECENT BILLS (1-TAP REVERSAL: AIRTIME · DATA · POWER)'),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: PayNoraColors.success.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text('100% Refund',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: PayNoraColors.success)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ..._recentAirtime.take(5).map((tx) {
-            final reversed = tx['reversed'] == true;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? PayNoraColors.darkCardSubtle : PayNoraColors.lightCardSubtle,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.receipt_long, color: PayNoraColors.brandSecondary, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${tx['operator']} · $_symbol${tx['amount']}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                        Text('${tx['phone_number']}',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      ],
-                    ),
-                  ),
-                  reversed
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('Reversed',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => _reverseAirtimePurchase(
-                                    '${tx['transaction_id']}',
-                                    '${tx['amount']}',
-                                    '${tx['operator']}',
-                                  ),
-                          icon: const Icon(Icons.replay, size: 14, color: Colors.white),
-                          label: const Text('Reverse',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: PayNoraColors.warning,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                ],
-              ),
-            );
-          }),
-        ]),
-
-      _card(isDark, [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _label('CONVERT AIRTIME · DATA · ELECTRICITY TO CASH'),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: PayNoraColors.brandSecondary.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('90% Instant Payout',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: PayNoraColors.brandSecondary)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'AIRTIME', label: Text('Airtime'), icon: Icon(Icons.phone_in_talk, size: 16)),
-            ButtonSegment(value: 'DATA', label: Text('Data'), icon: Icon(Icons.wifi, size: 16)),
-            ButtonSegment(value: 'ELECTRICITY', label: Text('Electricity'), icon: Icon(Icons.bolt, size: 16)),
-          ],
-          selected: {_a2cCategory},
-          onSelectionChanged: (s) {
-            setState(() {
-              _a2cCategory = s.first;
-              _a2cOperator = null;
-              _a2cOperatorName = null;
-              _a2cOperatorIcon = null;
-              _a2cVerified = false;
-              _a2cPorted = null;
-              _a2cDetectMsg = null;
-            });
-            _onA2CPhoneChanged(_a2cPhone.text);
-          },
-        ),
-        const SizedBox(height: 14),
-        _label(_a2cCategory == 'ELECTRICITY' ? 'NIGERIAN METER NUMBER' : 'NIGERIAN PHONE NUMBER'),
-        TextField(
-          controller: _a2cPhone,
-          keyboardType: TextInputType.number,
-          onChanged: _onA2CPhoneChanged,
-          decoration: InputDecoration(
-            hintText: _a2cCategory == 'ELECTRICITY' ? 'Enter 11-digit meter number' : '0802 000 0000',
-            prefixIcon: Icon(_a2cCategory == 'ELECTRICITY' ? Icons.electric_meter_outlined : Icons.sim_card_outlined),
-          ),
-        ),
-        if (_a2cCategory != 'ELECTRICITY')
-          _networkStatusBadge(
-            name: _a2cOperatorName,
-            icon: _a2cOperatorIcon,
-            verified: _a2cVerified,
-            ported: _a2cPorted,
-            detecting: _a2cDetecting,
-            message: _a2cDetectMsg,
-            onChangeNetwork: () => _pickNetworkManually(
-              onPicked: (code, name, icon) => setState(() {
-                _a2cOperator = code;
-                _a2cOperatorName = name;
-                _a2cOperatorIcon = icon;
-                _a2cVerified = true;
-                _a2cPorted = false;
-                _a2cDetectMsg = 'Network confirmed manually by you.';
-              }),
-            ),
-          ),
-        const SizedBox(height: 18),
-        _label('$_a2cCategory AMOUNT TO CONVERT'),
-        TextField(
-          controller: _a2cAmount,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-          decoration: InputDecoration(prefixText: '$_symbol ', hintText: '0'),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: ['500', '1000', '2000', '5000', '10000']
-              .map((a) => ActionChip(label: Text('$_symbol$a'), onPressed: () => setState(() => _a2cAmount.text = a)))
-              .toList(),
-        ),
-        const Divider(height: 24),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? PayNoraColors.darkCardSubtle : PayNoraColors.lightCardSubtle,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Value', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text('$_symbol${amt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Conversion Fee (10%)', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text('-$_symbol${fee.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: PayNoraColors.warning)),
-                ],
-              ),
-              const Divider(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Cash Credited to Wallet (90%)',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
-                  Text(
-                    '$_symbol${cashPayout.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: PayNoraColors.brandSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ]),
-
-      _payButton(
-        'Convert to $_symbol${cashPayout.toStringAsFixed(2)} Wallet Cash',
-        _convertAirtimeToCash,
       ),
     ]);
   }

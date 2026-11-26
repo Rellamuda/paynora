@@ -421,7 +421,7 @@ async def purchase_airtime(payload: AirtimePurchaseRequest, current_user: dict =
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
         "live_provider": flw_res is not None,
-        "reversible": True,
+        "reversible": False,
         "reversed": False,
         "message": f"{net['operator_name']} airtime of ₦{amount:.2f} sent to {payload.phone_number}.",
     }
@@ -476,7 +476,7 @@ async def purchase_data_bundle(payload: DataBundlePurchaseRequest, current_user:
         "currency": local_wallet["currency"],
         "wallet_balance_after": local_wallet["available_balance"],
         "live_provider": flw_res is not None,
-        "reversible": True,
+        "reversible": False,
         "reversed": False,
         "message": f"{net['operator_name']} data bundle activated on {payload.phone_number}.",
     }
@@ -538,7 +538,7 @@ async def purchase_electricity(payload: ElectricityPaymentRequest, current_user:
         "token": token_formatted,
         "units": (flw_res or {}).get("units", ""),
         "live_provider": flw_res is not None,
-        "reversible": True,
+        "reversible": False,
         "reversed": False,
         "message": f"Electricity payment of ₦{amount:.2f} to {verified['disco_name']} for {verified['customer_name']}.",
     }
@@ -556,75 +556,25 @@ def get_recent_airtime_purchases(current_user: dict = Depends(get_current_user))
 
 @router.post("/airtime/reverse")
 def reverse_airtime_purchase(payload: AirtimeReversalRequest, current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
-    tx = AIRTIME_TRANSACTIONS.get(payload.transaction_id)
-    if not tx or tx.get("user_id") != user_id:
-        raise HTTPException(status_code=404, detail="Bill transaction not found.")
-    if tx.get("reversed"):
-        raise HTTPException(status_code=400, detail="This purchase has already been reversed to cash.")
-
-    refund_amount = Decimal(tx["amount"])
-    local_wallet = _credit_local_wallet(user_id, refund_amount)
-    tx["reversed"] = True
-    tx["reversible"] = False
-    tx["status"] = "REVERSED"
-    persist_bills_db()
-    cat = tx.get("category", "AIRTIME")
-    return {
-        "status": "REVERSED",
-        "category": cat,
-        "transaction_id": tx["transaction_id"],
-        "operator": tx.get("operator", ""),
-        "phone_number": tx.get("phone_number", ""),
-        "refunded_amount": f"{refund_amount:.2f}",
-        "currency": local_wallet["currency"],
-        "wallet_balance_after": local_wallet["available_balance"],
-        "message": f"Reversed ₦{refund_amount:.2f} ({tx.get('operator', '')} {cat.lower()}) back to your wallet.",
-    }
+    """
+    Disabled for security & regulatory compliance:
+    Nigerian mobile operators (MTN, Airtel, Glo, 9mobile), electricity DisCos, and Flutterwave
+    do not allow reversing completed airtime, data, or electricity token purchases.
+    Failed bill payments are already automatically refunded to your wallet at purchase time.
+    """
+    raise HTTPException(
+        status_code=403,
+        detail="Completed airtime, data, and electricity purchases cannot be reversed once fulfilled by the network or electricity provider. Failed transactions are refunded automatically.",
+    )
 
 
 @router.post("/airtime-to-cash")
 def convert_airtime_to_cash(payload: AirtimeToCashRequest, current_user: dict = Depends(get_current_user)):
-    _require_nigeria_request(payload.country_iso)
-    _require_nigerian_user(current_user)
-    user_id = current_user["user_id"]
-    try:
-        airtime_amount = Decimal(payload.airtime_amount)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid amount.")
-    if airtime_amount <= Decimal("0"):
-        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
-
-    cat = (payload.category or "AIRTIME").upper()
-    if cat == "ELECTRICITY":
-        meter = re.sub(r"\D", "", payload.phone_number)
-        prior = next((t for t in AIRTIME_TRANSACTIONS.values()
-                      if t.get("user_id") == user_id and t.get("category") == "ELECTRICITY" and t.get("meter_number") == meter), None)
-        op_code = (prior or {}).get("disco") or (payload.operator_code or "ELECTRICITY").upper()
-        op_name = (prior or {}).get("disco_name") or op_code
-    else:
-        _require_nigerian_phone(payload.phone_number)
-        op_code = (payload.operator_code or _ng_prefix_operator(payload.phone_number) or "").upper()
-        if op_code not in NG_OPERATOR_CODES:
-            raise HTTPException(status_code=400, detail="Please select the mobile network for this number.")
-        op_name = _operator_name(op_code)
-
-    cash_payout = (airtime_amount * AIRTIME_TO_CASH_PAYOUT_RATE).quantize(Decimal("0.01"))
-    conversion_fee = (airtime_amount - cash_payout).quantize(Decimal("0.01"))
-    local_wallet = _credit_local_wallet(user_id, cash_payout)
-    conv_id = f"a2c_{uuid.uuid4().hex[:10]}"
-    return {
-        "status": "CONVERTED",
-        "category": cat,
-        "conversion_id": conv_id,
-        "operator": op_code,
-        "operator_name": op_name,
-        "phone_number": payload.phone_number,
-        "airtime_amount": f"{airtime_amount:.2f}",
-        "payout_rate": "90%",
-        "conversion_fee": f"{conversion_fee:.2f}",
-        "cash_credited": f"{cash_payout:.2f}",
-        "currency": local_wallet["currency"],
-        "wallet_balance_after": local_wallet["available_balance"],
-        "message": f"Converted ₦{airtime_amount:.2f} {op_code} {cat.lower()} into ₦{cash_payout:.2f} wallet cash (90% payout).",
-    }
+    """
+    Disabled for security & regulatory compliance:
+    Unverified airtime, mobile data, and electricity-to-cash conversion is not permitted.
+    """
+    raise HTTPException(
+        status_code=403,
+        detail="Airtime, data, and electricity-to-cash conversion is disabled. Nigerian telcos, DisCos, Paystack, and Flutterwave do not support direct unit-to-cash conversion.",
+    )
